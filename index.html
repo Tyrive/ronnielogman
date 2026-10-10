@@ -424,6 +424,13 @@ canvas{width:100%;height:190px;display:block}
       </div>
     </div>
     <div class="card">
+      <h2>Aus FitNotes übernehmen</h2>
+      <p class="muted" style="margin:0">In FitNotes unter <b>Einstellungen → Backup</b> eine Sicherung erstellen und die <b>.fitnotes</b>-Datei hier auswählen. Die Datei wird nur auf diesem Gerät gelesen.</p>
+      <div><button class="btn" id="fnPick">FitNotes-Datei auswählen</button><input type="file" id="fnFile" hidden></div>
+      <div class="muted" id="fnPrev" aria-live="polite"></div>
+      <div id="fnActs" hidden style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fnGo" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Übernehmen</button><button class="btn" id="fnNo">Abbrechen</button></div>
+    </div>
+    <div class="card">
       <h2>Backup</h2>
       <p class="muted" style="margin:0" id="dataHint">Deine Daten liegen nur in diesem Browser. Kopiere das Backup gelegentlich in eine Notiz oder Datei.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="exp">Backup erzeugen</button><button class="btn" id="copy">Kopieren</button></div>
@@ -1055,6 +1062,111 @@ plDraft.color=freeColor();persist();setMode();renderAll();
   requestAnimationFrame(()=>requestAnimationFrame(()=>sp.classList.add('in')));
   ts.push(setTimeout(finish,rm?700:1700));
   sp.addEventListener('click',finish);
+})();
+</script>
+
+<script>
+/* Import aus FitNotes (.fitnotes = SQLite-Datenbank). Die Datei wird nur auf dem Gerät gelesen. */
+(function(){
+  const SQLJS='https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/';
+  const CAT={Shoulders:'Schultern',Triceps:'Trizeps',Biceps:'Bizeps',Chest:'Brust',Back:'Rücken',Legs:'Beine',Abs:'Core',Cardio:'Ganzkörper'};
+  const el=id=>document.getElementById(id);
+  let pending=null,sqlP=null;
+
+  function loadSql(){
+    if(sqlP)return sqlP;
+    sqlP=new Promise((res,rej)=>{
+      const go=()=>window.initSqlJs({locateFile:f=>SQLJS+f}).then(res,rej);
+      if(window.initSqlJs)return go();
+      const sc=document.createElement('script');sc.src=SQLJS+'sql-wasm.js';sc.onload=go;sc.onerror=()=>{sqlP=null;rej(new Error('net'))};document.head.appendChild(sc);
+    });
+    return sqlP;
+  }
+  // Trainingstag einem Plan zuordnen (nach den FitNotes-Kategorien)
+  function planFor(cats){
+    const has=c=>cats.has(c),by=n=>db.plans.find(p=>p.name===n);
+    if(cats.size&&[...cats].every(c=>c==='Legs'))return by('Beine');
+    if(has('Back')&&!has('Chest')&&!has('Legs')&&(has('Biceps')||cats.size===1))return by('Pull');
+    if(has('Chest')&&!has('Back')&&!has('Legs')&&!has('Biceps'))return by('Push');
+    return by('Gym');
+  }
+  const fmtD=d=>d.split('-').reverse().join('.');
+
+  async function read(file){
+    const buf=new Uint8Array(await file.arrayBuffer());
+    if(new TextDecoder().decode(buf.slice(0,15))!=='SQLite format 3')throw new Error('format');
+    const SQL=await loadSql();const f=new SQL.Database(buf);
+    const q=(sql)=>{const r=f.exec(sql);if(!r.length)return[];const{columns:c,values:v}=r[0];return v.map(x=>Object.fromEntries(c.map((k,i)=>[k,x[i]])))};
+    const qs=sql=>{try{return q(sql)}catch(e){return[]}};
+    try{
+      const tables=new Set(q("select name from sqlite_master where type='table'").map(r=>r.name));
+      if(!tables.has('training_log')||!tables.has('exercise'))throw new Error('format');
+      const sets=q(`select t._id id,t.date d,t.metric_weight w,t.reps r,e.name ex,coalesce(c.name,'') cat
+        from training_log t join exercise e on e._id=t.exercise_id left join Category c on c._id=e.category_id
+        where e.exercise_type_id=0 order by t.date,t._id`);
+      const skipped=(qs(`select count(*) n from training_log t join exercise e on e._id=t.exercise_id where e.exercise_type_id!=0`)[0]||{n:0}).n;
+      const setNote=new Map(qs("select owner_id o,comment c from Comment where owner_type_id=1").map(r=>[r.o,r.c]));
+      const dayNote=new Map();qs("select date d,comment c from WorkoutComment").forEach(r=>{const k=String(r.d).slice(0,10);dayNote.set(k,(dayNote.has(k)?dayNote.get(k)+' / ':'')+r.c)});
+      return build(sets,setNote,dayNote,skipped);
+    }finally{f.close()}
+  }
+
+  function build(sets,setNote,dayNote,skipped){
+    const days=new Map(),catOf=new Map();
+    for(const s of sets){
+      const d=String(s.d).slice(0,10),r=Math.round(+s.r||0);if(r<=0)continue;
+      if(!days.has(d))days.set(d,{cats:new Set(),ex:new Map()});
+      const day=days.get(d),name=String(s.ex).trim().slice(0,80);if(!name)continue;
+      day.cats.add(s.cat);catOf.set(name,s.cat);
+      if(!day.ex.has(name))day.ex.set(name,{name,sets:[],notes:[]});
+      const w=Math.round((+s.w||0)*100)/100;
+      day.ex.get(name).sets.push({w:w>0?w:'',r});
+      if(setNote.has(s.id))day.ex.get(name).notes.push(String(setNote.get(s.id)));
+    }
+    const sessions=[];let setCount=0;
+    for(const[d,day]of days){
+      const p=planFor(day.cats);
+      const exercises=[...day.ex.values()].map(e=>{setCount+=e.sets.length;const o={name:e.name,sets:e.sets};if(e.notes.length)o.note=e.notes.join(' / ');return o});
+      const s={id:'fn-'+d.replace(/-/g,''),date:d,type:'kraft',title:p?p.name:'Frei',note:dayNote.get(d)||'',exercises};
+      if(p){s.planId=p.id;s.color=p.color}
+      sessions.push(s);
+    }
+    const custom=[...catOf].filter(([n])=>!libInfo(n)).map(([n,c])=>({n,m:CAT[c]||'Eigene',e:'aus FitNotes'}));
+    // Prüfung wie bei Backup und Cloud
+    const clean=cleanDb({sessions,custom,goals:db.goals});
+    const have=new Set(db.sessions.map(s=>s.id));
+    const fresh=clean.sessions.filter(s=>!have.has(s.id));
+    return{all:clean.sessions,fresh,custom:clean.custom,setCount,exCount:catOf.size,skipped};
+  }
+
+  function preview(r){
+    if(!r.all.length){el('fnPrev').textContent='In der Datei wurden keine Krafttrainings gefunden.';return}
+    const dates=r.all.map(s=>s.date).sort();
+    let t=`${r.all.length} Trainings (${fmtD(dates[0])} – ${fmtD(dates[dates.length-1])}) · ${r.setCount.toLocaleString('de-DE')} Sätze · ${r.exCount} Übungen, davon ${r.custom.length} neu.`;
+    const dup=r.all.length-r.fresh.length;
+    if(dup)t+=` ${dup} Trainings sind schon vorhanden und werden übersprungen.`;
+    if(r.skipped)t+=` ${r.skipped} Cardio-Einträge werden nicht übernommen.`;
+    if(!r.fresh.length)t+=' Es gibt nichts Neues zu übernehmen.';
+    el('fnPrev').textContent=t;el('fnActs').hidden=!r.fresh.length;
+  }
+
+  el('fnPick').addEventListener('click',()=>el('fnFile').click());
+  el('fnFile').addEventListener('change',async e=>{
+    const file=e.target.files[0];e.target.value='';if(!file)return;
+    pending=null;el('fnActs').hidden=true;el('fnPrev').textContent='Lese Datei …';
+    try{pending=await read(file);preview(pending)}
+    catch(err){el('fnPrev').textContent=err.message==='format'?'Das ist keine FitNotes-Sicherung. Bitte die .fitnotes-Datei aus FitNotes auswählen.':err.message==='net'?'Der Import braucht beim ersten Mal Internet. Bitte online erneut versuchen.':'Die Datei konnte nicht gelesen werden.'}
+  });
+  el('fnNo').addEventListener('click',()=>{pending=null;el('fnActs').hidden=true;el('fnPrev').textContent=''});
+  el('fnGo').addEventListener('click',()=>{
+    if(!pending)return;const r=pending;pending=null;
+    const have=new Set(db.sessions.map(s=>s.id));
+    db.sessions.push(...r.fresh.filter(s=>!have.has(s.id)));
+    const known=new Set(db.custom.map(c=>c.n));
+    r.custom.forEach(c=>{if(!known.has(c.n)&&!libInfo(c.n))db.custom.push(c)});
+    persist();renderAll();el('fnActs').hidden=true;
+    el('fnPrev').textContent=`${r.fresh.length} Trainings übernommen.`;toast(`${r.fresh.length} Trainings übernommen`);
+  });
 })();
 </script>
 
