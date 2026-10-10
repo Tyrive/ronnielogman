@@ -85,7 +85,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .chips.scroll::-webkit-scrollbar{display:none}
 .chips.scroll .chip{flex:none}
-.ex-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ex-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.exname{display:flex;align-items:center;gap:10px;min-width:0}
+.exi{width:42px;height:42px;border-radius:50%;flex:none;display:block;background:#fff;box-shadow:0 0 0 1px var(--line);object-fit:cover}
+.exi.m{width:34px;height:34px}
+.exi.s{width:26px;height:26px}
+.libItem .li{flex:1}
+.libItem .exi{margin-right:2px}
+.pname{display:flex;align-items:center;gap:8px;min-width:0}
 .ex-head strong{font-size:16px}
 .last{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .tag{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-top:2px}
@@ -702,6 +709,37 @@ Unterarmcurls|Unterarme|Kurzhantel
 Dead Hang|Unterarme|Körpergewicht`.split('\n').map(l=>{const[n,m,e]=l.split('|');return{n,m,e}});
 const MUSCLES=['Alle','Brust','Rücken','Schultern','Bizeps','Trizeps','Beine','Po','Waden','Core','Ganzkörper','Unterarme'];
 const EQUIP=['Alle','Langhantel','SZ-Stange','Kurzhantel','Kettlebell','Kabelzug','Maschine','Körpergewicht','Band'];
+/* Übungs-Icons (icons/ex/*.svg): erst exakte Namen, dann Stichworte – auch für importierte Namen */
+const EX_ICON_RULES=[
+  ['uni-hammercurl',['einarmig hammer','single arm hammer','uni hammer','one arm hammer']],
+  ['hammercurl',['hammercurl','hammer curl']],
+  ['reverse-butterfly',['reverse butterfly','reverse fly','reverse flys','rear delt']],
+  ['butterfly-maschine',['butterfly','pec deck','chest fly machine']],
+  ['overhead-trizeps',['overhead tri','uberkopf-trizeps','uberkopf trizeps','ueberkopf']],
+  ['trizepsdruecken-kabel',['trizepsdrucken am kabel','triceps pushdown','tricep pushdown','pushdown','rope pressdown']],
+  ['latzug-nautilus',['latzug','lat pull','lat pulldown']],
+  ['schraegbankdruecken-kh',['schragbankdrucken (kh)','incline dumbbell','incline db']],
+  ['schulterdruecken-kh',['schulterdrucken (kh)','arnold press','dumbbell shoulder press','db shoulder press','schulterdrucken kh']],
+  ['seitheben-maschine',['seitheben','lateral raise','lateral raiese','lateral rais']],
+  ['vertical-chest-press',['brustpresse','chest press','vertical press']],
+  ['beinpresse',['beinpresse','leg press']],
+  ['hackenschmidt',['hackenschmi','hack squat']],
+  ['beinstrecker',['beinstrecker','leg extension']],
+  ['beinbeuger-sitzend',['beinbeuger sitzend','seated leg curl']],
+  ['wadenheben-sitzend',['wadenheben sitzend','seated calf']],
+  ['abduktion',['abduktion','abduktoren','abduction','hip abduct']],
+  ['hip-thrust-maschine',['hip thrust']],
+  ['bizepscurl-maschine',['bizepsmaschine','bizepscurl maschine','bizeps maschine','machine curl','biceps machine']]
+];
+const EX_ICON_SKIP=['straight-arm','straight arm'];
+const exIconCache=new Map();
+function iconFor(name){
+  if(exIconCache.has(name))return exIconCache.get(name);
+  const n=norm(String(name||''));let hit=null;
+  if(!EX_ICON_SKIP.some(k=>n.includes(k)))for(const[file,keys]of EX_ICON_RULES){if(keys.some(k=>n.includes(norm(k)))){hit=file;break}}
+  exIconCache.set(name,hit);return hit;
+}
+const exIcon=(name,size)=>{const f=iconFor(name);return f?`<img class="exi${size?' '+size:''}" src="icons/ex/${f}.svg" alt="" loading="lazy" decoding="async">`:''};
 const libInfo=n=>LIB.find(x=>x.n===n)||(db&&db.custom||[]).find(x=>x.n===n);
 const BASE={'Schulterdrücken (KH)':16,'Trizepsdrücken (KH)':10,'Rudern (KH)':24,'Bizepscurls (KH)':12,'Kniebeugen (KH)':24,'Rumänisches Kreuzheben (KH)':28,'Ausfallschritte':14,'Wadenheben':20,'Bankdrücken':70,'Kniebeugen':85,'Kreuzheben':110,'Latzug':60};
 
@@ -865,7 +903,7 @@ function allNames(){return[...new Set(db.sessions.filter(s=>s.type==='kraft').fl
 function lastFor(name){const ss=db.sessions.filter(s=>s.type==='kraft'&&s.id!==editingId&&s.date<=selDate&&s.exercises.some(e=>e.name===name)).sort((a,b)=>b.date.localeCompare(a.date));if(!ss.length)return null;const e=ss[0].exercises.find(e=>e.name===name);return{date:ss[0].date,sets:e.sets}}
 const shortDay=s=>{const d=parseD(s);return WD[(d.getDay()+6)%7]+', '+pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'};
 function newEx(name){const l=lastFor(name);return{name,sets:l?l.sets.map(s=>({w:s.w||'',r:s.r||''})):[{w:'',r:''},{w:'',r:''},{w:'',r:''}]}}
-function renderTpls(){$('tpls').innerHTML=db.plans.map(p=>`<button class="chip${draft.planId===p.id?' on':''}" data-tpl="${p.id}">${mkRaw('fill',p.color)}${esc(p.name)}</button>`).join('')+`<button class="chip${!draft.planId&&draft.title==='Frei'?' on':''}" data-tpl="">${mkRaw('fill',FREE_COLOR)}Frei</button>`}
+function renderTpls(){$('tpls').innerHTML=db.plans.map(p=>`<button class="chip${draft.planId===p.id?' on':''}" data-tpl="${p.id}">${mkRaw('fill',p.color)}${esc(p.name)}</button>`).join('')}
 
 let libM='Alle',libE='Alle';
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
@@ -877,7 +915,7 @@ function renderLib(){
   const items=all.filter(x=>(libM==='Alle'||x.m===libM)&&(libE==='Alle'||x.e===libE)&&(!q||norm(x.n).includes(q)));
   let html='';
   if(raw&&!all.some(x=>norm(x.n)===q))html+=`<button class="libItem custom" data-add="${esc(raw)}"><span><b>„${esc(raw)}“</b><small>Als eigene Übung hinzufügen</small></span><i>+</i></button>`;
-  html+=items.map(x=>`<button class="libItem${inDraft.has(x.n)?' in':''}" data-add="${esc(x.n)}"><span><b>${esc(x.n)}</b><small>${esc(x.m)}${x.e?' · '+esc(x.e):''}${x.own?' · eigene':''}</small></span><i>${inDraft.has(x.n)?'✓':'+'}</i></button>`).join('');
+  html+=items.map(x=>`<button class="libItem${inDraft.has(x.n)?' in':''}" data-add="${esc(x.n)}">${exIcon(x.n,'m')}<span class="li"><b>${esc(x.n)}</b><small>${esc(x.m)}${x.e?' · '+esc(x.e):''}${x.own?' · eigene':''}</small></span><i>${inDraft.has(x.n)?'✓':'+'}</i></button>`).join('');
   if(!html)html='<div class="muted" style="padding:10px 12px">Keine Übung für diese Filter. Tipp einen Namen ein, um eine eigene anzulegen.</div>';
   $('libList').innerHTML=html;$('libCount').textContent=items.length+' Übungen';
   const sw=swapIdx!==null&&draft.exercises[swapIdx];
@@ -906,7 +944,7 @@ function renderExList(){
   $('noteWrap').hidden=type==='kraft'&&!ready;$('save').hidden=type==='kraft'&&!ready;
   if(!draft.exercises.length){$('exList').innerHTML=ready?'<div class="card muted">Noch keine Übungen. Füge unten eine hinzu.</div>':'';return}
   $('exList').innerHTML=draft.exercises.map((e,i)=>{const l=lastFor(e.name),inf=libInfo(e.name);return`<div class="card${swapIdx===i?' swapping':''}" id="exc${i}">
-    <div class="ex-head"><div><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div><div class="exacts"><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
+    <div class="ex-head"><div class="exname">${exIcon(e.name)}<div style="min-width:0"><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div></div><div class="exacts"><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
     ${confirmDel===i?`<div class="exconfirm">Übung wirklich entfernen?<button class="btn small yes" data-delex="${i}">Entfernen</button><button class="btn small" data-nodel="1">Abbrechen</button></div>`:''}
     ${inf&&inf.tip?`<div class="cx-tip">Tipp: ${esc(inf.tip)}</div>`:''}
     ${l?`<div class="last">Zuletzt ${shortDay(l.date)}: ${setsSummary(l.sets)}</div>`:''}
@@ -1113,7 +1151,7 @@ $('pExHits').addEventListener('click',e=>{const b=e.target.closest('[data-pex]')
 function renderProg(){
   const st=exStats();
   if(!progEx||!st.has(progEx)){let best=null;st.forEach((o,n)=>{if(!best||o.last>st.get(best).last)best=n});progEx=best}
-  $('pExSel').innerHTML=progEx?`<b>${esc(progEx)}</b><small>${st.get(progEx).n}× trainiert</small>`:'<span class="muted">Noch keine Krafttrainings eingetragen.</span>';
+  $('pExSel').innerHTML=progEx?`<span class="exname">${exIcon(progEx,'m')}<b>${esc(progEx)}</b></span><small>${st.get(progEx).n}× trainiert</small>`:'<span class="muted">Noch keine Krafttrainings eingetragen.</span>';
   renderExHits();
   const name=progEx,ss=db.sessions.filter(s=>s.type==='kraft').sort((a,b)=>a.date.localeCompare(b.date));
   const rows=[];ss.forEach(s=>{const e=s.exercises.find(e=>e.name===name);if(e)rows.push({x:parseD(s.date).getTime(),sets:e.sets})});
@@ -1178,7 +1216,7 @@ function renderPlanForm(){
   $('plTitle').textContent=plEdit?'Plan bearbeiten':'Neuer Plan';$('plCancel').hidden=!plEdit;$('plSave').textContent=plEdit?'Änderungen speichern':'Plan speichern';
   const used=new Set(db.plans.filter(p=>p.id!==plEdit).map(p=>p.color));
   $('plColors').innerHTML=PLAN_COLORS.map(c=>`<button class="sw${c===plDraft.color?' on':''}${used.has(c)?' used':''}" data-col="${c}" style="--c:${c}" aria-label="Farbe ${c}${used.has(c)?', schon vergeben':''}" aria-pressed="${c===plDraft.color}"></button>`).join('');
-  $('plEx').innerHTML=plDraft.exercises.length?plDraft.exercises.map((n,i)=>`<div class="prow"><span class="n">${i+1}</span><span>${esc(n)}</span><span class="acts"><button class="icon" data-up="${i}" aria-label="Nach oben"${i?'':' disabled'}>↑</button><button class="icon" data-down="${i}" aria-label="Nach unten"${i<plDraft.exercises.length-1?'':' disabled'}>↓</button><button class="icon" data-rm="${i}" aria-label="Entfernen">✕</button></span></div>`).join('')
+  $('plEx').innerHTML=plDraft.exercises.length?plDraft.exercises.map((n,i)=>`<div class="prow"><span class="n">${i+1}</span><span class="pname">${exIcon(n,'s')}${esc(n)}</span><span class="acts"><button class="icon" data-up="${i}" aria-label="Nach oben"${i?'':' disabled'}>↑</button><button class="icon" data-down="${i}" aria-label="Nach unten"${i<plDraft.exercises.length-1?'':' disabled'}>↓</button><button class="icon" data-rm="${i}" aria-label="Entfernen">✕</button></span></div>`).join('')
     :'<div class="muted" style="padding:10px 12px">Noch keine Übungen. Füge unten welche hinzu.</div>';
   $('plNames').innerHTML=libItems().map(x=>`<option value="${esc(x.n)}">`).join('');
 }
@@ -1239,7 +1277,7 @@ function renderCx(){
   $('cxCount').textContent=db.custom.length+(db.custom.length===1?' Übung':' Übungen');
   const list=[...db.custom].sort((a,b)=>a.n.localeCompare(b.n,'de'));
   $('cxList').innerHTML=list.length?list.map(c=>`<div class="entry${c.n===cxEdit?' editing':''}" data-cx="${esc(c.n)}" role="button" tabindex="0" aria-label="${esc(c.n)} bearbeiten" style="--c:var(--accent)"><div class="bar"></div><div style="min-width:0">
-      <div class="title">${esc(c.n)}${c.n===cxEdit?'<span class="hint">wird bearbeitet</span>':''}<button class="delbtn" data-cxdel="1" aria-label="${esc(c.n)} löschen">−</button></div>
+      <div class="title">${exIcon(c.n,'s')}${esc(c.n)}${c.n===cxEdit?'<span class="hint">wird bearbeitet</span>':''}<button class="delbtn" data-cxdel="1" aria-label="${esc(c.n)} löschen">−</button></div>
       <div class="tag">${esc(c.m)}${c.m2?' + '+esc(c.m2):''} · ${esc(c.e)}</div>
       ${c.tip?`<div class="cx-tip">${esc(c.tip)}</div>`:''}
       <div class="confirm">Übung löschen? Bisherige Trainings bleiben erhalten.<button class="btn small yes" data-cxyes="1">Löschen</button><button class="btn small" data-no="1">Abbrechen</button></div></div></div>`).join('')

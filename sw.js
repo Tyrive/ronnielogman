@@ -1,6 +1,6 @@
 // RonnieLogman Service Worker
 // Bei jedem Update der App diese Versionsnummer erhöhen (z. B. v2, v3 ...).
-const CACHE = 'ronnielogman-v8';
+const CACHE = 'ronnielogman-v9';
 const APP_SHELL = [
   './',
   './index.html',
@@ -9,7 +9,26 @@ const APP_SHELL = [
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
-  './icons/favicon-32.png'
+  './icons/favicon-32.png',
+  './icons/ex/abduktion.svg',
+  './icons/ex/beinbeuger-sitzend.svg',
+  './icons/ex/beinpresse.svg',
+  './icons/ex/beinstrecker.svg',
+  './icons/ex/bizepscurl-maschine.svg',
+  './icons/ex/butterfly-maschine.svg',
+  './icons/ex/hackenschmidt.svg',
+  './icons/ex/hammercurl.svg',
+  './icons/ex/hip-thrust-maschine.svg',
+  './icons/ex/latzug-nautilus.svg',
+  './icons/ex/overhead-trizeps.svg',
+  './icons/ex/reverse-butterfly.svg',
+  './icons/ex/schraegbankdruecken-kh.svg',
+  './icons/ex/schulterdruecken-kh.svg',
+  './icons/ex/seitheben-maschine.svg',
+  './icons/ex/trizepsdruecken-kabel.svg',
+  './icons/ex/uni-hammercurl.svg',
+  './icons/ex/vertical-chest-press.svg',
+  './icons/ex/wadenheben-sitzend.svg'
 ];
 
 self.addEventListener('install', event => {

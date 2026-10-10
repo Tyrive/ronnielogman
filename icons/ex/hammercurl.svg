@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="c"><circle cx="256" cy="256" r="250"/></clipPath>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f1f2f3"/><stop offset="0.5" stop-color="#d3d6d9"/><stop offset="1" stop-color="#a9aeb3"/>
+    </linearGradient>
+    <linearGradient id="metalV" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b9bdc1"/><stop offset="0.45" stop-color="#eceef0"/><stop offset="1" stop-color="#a3a8ad"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9c9c9c"/><stop offset="0.5" stop-color="#dcdcdc"/><stop offset="1" stop-color="#a8a8a8"/>
+    </linearGradient>
+    <linearGradient id="skinArm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e2e2e2"/><stop offset="1" stop-color="#9a9a9a"/>
+    </linearGradient>
+    <radialGradient id="musc" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#f58a52"/><stop offset="0.6" stop-color="#e0582a"/><stop offset="1" stop-color="#b8401c"/>
+    </radialGradient>
+    <linearGradient id="pad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b6e72"/><stop offset="1" stop-color="#2f3134"/>
+    </linearGradient>
+    <radialGradient id="plate" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#4a4c4f"/><stop offset="1" stop-color="#121314"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="250" fill="#ffffff"/>
+  <g clip-path="url(#c)" stroke-linejoin="round" stroke-linecap="round">
+
+    <ellipse cx="256" cy="452" rx="110" ry="14" fill="#000" opacity="0.08"/>
+    <!-- far leg -->
+    <path d="M238 300 L230 432 L248 432 L258 306 Z" fill="#a8a8a8" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- near leg -->
+    <path d="M254 300 Q270 360 266 432 L284 432 Q290 360 282 300 Z" fill="url(#skin)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <path d="M222 430 L252 430 Q262 434 260 442 L222 442 Z" fill="#2b2c2e"/>
+    <path d="M260 430 L290 430 Q302 434 300 442 L260 442 Z" fill="#2b2c2e"/>
+    <!-- shorts -->
+    <path d="M226 272 L290 272 Q296 320 288 350 L254 352 L250 332 L244 352 L226 350 Q220 312 226 272 Z" fill="#1e1f21"/>
+
+    <!-- far arm hanging with dumbbell -->
+    <path d="M228 152 Q216 200 220 260 L234 262 Q234 206 242 160 Z" fill="#a8a8a8" stroke="#6f6f6f" stroke-width="1.5"/>
+    <path d="M220 258 Q218 290 222 316 L234 316 Q236 290 234 260 Z" fill="#a8a8a8" stroke="#6f6f6f" stroke-width="1.5"/>
+    <rect x="223" y="296" width="8" height="40" fill="#5a5d61"/>
+    <rect x="215" y="282" width="24" height="18" rx="4" fill="url(#plate)"/>
+    <rect x="215" y="332" width="24" height="18" rx="4" fill="url(#plate)"/>
+    <circle cx="227" cy="316" r="7" fill="#b4b4b4" stroke="#6f6f6f" stroke-width="1.5"/>
+
+    <!-- torso -->
+    <path d="M228 278 Q220 230 226 170 Q234 140 258 138 Q284 140 290 168 Q296 230 288 278 Z" fill="url(#skin)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <path d="M262 150 Q288 154 290 186 Q278 196 262 190 Z" fill="#cfcfcf" stroke="#8a8a8a" stroke-width="1"/>
+    <!-- head -->
+    <path d="M250 140 L268 140 L270 124 L252 124 Z" fill="#bdbdbd"/>
+    <ellipse cx="264" cy="106" rx="18" ry="21" fill="url(#skin)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <path d="M246 102 Q248 84 264 84 Q280 84 282 96 Q270 92 260 94 Q252 96 246 102 Z" fill="#6a6a6a"/>
+
+    <!-- near arm: upper arm along body -->
+    <path d="M262 150 Q280 146 286 166 Q290 210 284 248 L266 250 Q260 210 262 150 Z" fill="url(#skinArm)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- biceps -->
+    <path d="M276 166 Q290 190 288 236 Q280 244 274 236 Q270 200 276 166 Z" fill="url(#musc)" stroke="#9d3616" stroke-width="1.2"/>
+    <path d="M258 150 Q272 140 288 154 Q286 168 274 172 Q260 168 258 150 Z" fill="#c6c6c6" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- forearm curled forward-up -->
+    <path d="M268 246 Q282 256 292 246 L334 190 L320 180 L274 236 Z" fill="url(#skinArm)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- brachioradialis -->
+    <path d="M280 236 Q300 214 326 184 L332 190 Q310 220 290 246 Z" fill="url(#musc)" stroke="#9d3616" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="276" cy="246" r="9" fill="#bdbdbd" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- dumbbell neutral grip (vertical) -->
+    <rect x="324" y="160" width="8" height="42" fill="#5a5d61" transform="rotate(-10 328 181)"/>
+    <rect x="315" y="146" width="26" height="20" rx="4" fill="url(#plate)" transform="rotate(-10 328 156)"/>
+    <rect x="319" y="196" width="26" height="20" rx="4" fill="url(#plate)" transform="rotate(-10 332 206)"/>
+    <circle cx="328" cy="182" r="9" fill="#c4c4c4" stroke="#6f6f6f" stroke-width="1.5"/>
+  </g>
+</svg>

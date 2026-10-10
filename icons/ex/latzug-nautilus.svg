@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="c"><circle cx="256" cy="256" r="250"/></clipPath>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f1f2f3"/><stop offset="0.5" stop-color="#d3d6d9"/><stop offset="1" stop-color="#a9aeb3"/>
+    </linearGradient>
+    <linearGradient id="metalV" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b9bdc1"/><stop offset="0.45" stop-color="#eceef0"/><stop offset="1" stop-color="#a3a8ad"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9c9c9c"/><stop offset="0.5" stop-color="#dcdcdc"/><stop offset="1" stop-color="#a8a8a8"/>
+    </linearGradient>
+    <linearGradient id="skinArm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e2e2e2"/><stop offset="1" stop-color="#9a9a9a"/>
+    </linearGradient>
+    <radialGradient id="musc" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#f58a52"/><stop offset="0.6" stop-color="#e0582a"/><stop offset="1" stop-color="#b8401c"/>
+    </radialGradient>
+    <linearGradient id="pad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b6e72"/><stop offset="1" stop-color="#2f3134"/>
+    </linearGradient>
+    <radialGradient id="plate" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#4a4c4f"/><stop offset="1" stop-color="#121314"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="250" fill="#ffffff"/>
+
+  <g clip-path="url(#c)" stroke-linejoin="round" stroke-linecap="round">
+    <!-- floor shadow -->
+    <ellipse cx="262" cy="448" rx="170" ry="16" fill="#000" opacity="0.08"/>
+
+    <!-- ===== MACHINE (back layer) ===== -->
+    <!-- base rails -->
+    <path d="M118 432 L392 432 L400 442 L112 442 Z" fill="url(#metal)" stroke="#7d8287" stroke-width="2"/>
+    <rect x="104" y="440" width="34" height="8" rx="2" fill="#3a3c3f"/>
+    <rect x="374" y="440" width="34" height="8" rx="2" fill="#3a3c3f"/>
+    <!-- rear upright -->
+    <path d="M318 436 L318 262 L340 262 L340 436 Z" fill="url(#metalV)" stroke="#7d8287" stroke-width="2"/>
+    <!-- diagonal brace to seat -->
+    <path d="M330 300 L196 404 L210 418 L340 322 Z" fill="url(#metal)" stroke="#7d8287" stroke-width="2"/>
+    <!-- seat post -->
+    <path d="M176 352 L176 436 L194 436 L194 352 Z" fill="url(#metalV)" stroke="#7d8287" stroke-width="2"/>
+    <!-- thigh pad post -->
+    <path d="M150 290 L150 352 L162 352 L162 290 Z" fill="url(#metalV)" stroke="#7d8287" stroke-width="2"/>
+
+    <!-- far lever arm -->
+    <path d="M340 258 L214 92 L228 84 L352 248 Z" fill="#bfc3c7" stroke="#7d8287" stroke-width="2"/>
+    <line x1="221" y1="88" x2="221" y2="126" stroke="#8d9297" stroke-width="5"/>
+    <path d="M221 126 q-2 14 10 16" fill="none" stroke="#5a5d61" stroke-width="7"/>
+
+    <!-- plate horn + plate -->
+    <path d="M336 256 L392 300 L384 310 L330 268 Z" fill="url(#metal)" stroke="#7d8287" stroke-width="2"/>
+    <circle cx="388" cy="306" r="40" fill="url(#plate)" stroke="#0c0c0d" stroke-width="2"/>
+    <circle cx="388" cy="306" r="26" fill="none" stroke="#2c2e30" stroke-width="3"/>
+    <circle cx="388" cy="306" r="7" fill="#c9cdd1" stroke="#7d8287" stroke-width="1.5"/>
+    <!-- storage horn on base -->
+    <rect x="352" y="410" width="50" height="8" rx="3" fill="url(#metal)" stroke="#7d8287" stroke-width="1.5"/>
+    <!-- pivot block -->
+    <rect x="312" y="244" width="40" height="26" rx="4" fill="url(#metal)" stroke="#7d8287" stroke-width="2"/>
+    <circle cx="332" cy="257" r="6" fill="#8d9297"/>
+
+    <!-- seat -->
+    <path d="M130 344 Q132 332 146 332 L228 332 Q240 334 238 346 L236 356 L130 356 Z" fill="url(#pad)" stroke="#202224" stroke-width="2"/>
+
+    <!-- ===== ATHLETE ===== -->
+    <!-- lower leg (far) -->
+    <path d="M146 336 Q132 380 136 424 L152 426 Q156 384 162 342 Z" fill="url(#skin)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- shoes -->
+    <path d="M128 424 Q130 416 140 416 L160 418 Q166 426 160 432 L128 432 Z" fill="#2b2c2e"/>
+    <!-- thigh -->
+    <path d="M222 340 Q190 318 150 322 Q138 330 142 344 Q186 352 220 356 Z" fill="url(#skinArm)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- shorts -->
+    <path d="M178 316 Q206 306 236 316 Q244 336 236 354 L176 354 Q168 334 178 316 Z" fill="#1e1f21"/>
+    <path d="M178 330 Q160 326 152 330 L150 346 L184 350 Z" fill="#1e1f21"/>
+
+    <!-- thigh pad (over thighs) -->
+    <rect x="128" y="288" width="54" height="24" rx="12" fill="url(#pad)" stroke="#202224" stroke-width="2"/>
+    <ellipse cx="128" cy="300" rx="7" ry="12" fill="#55585c" stroke="#202224" stroke-width="1.5"/>
+
+    <!-- torso (back view) -->
+    <path d="M176 318 Q170 280 166 252 Q160 222 170 210 Q190 198 206 198 Q224 198 242 210 Q252 222 246 252 Q242 282 238 318 Q208 324 176 318 Z"
+          fill="url(#skin)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- traps (neutral) -->
+    <path d="M188 204 Q206 196 224 204 L216 238 Q206 244 196 238 Z" fill="#cfcfcf" stroke="#8a8a8a" stroke-width="1"/>
+    <!-- lats (target) -->
+    <path d="M170 214 Q186 226 196 242 Q202 270 200 300 Q190 296 180 286 Q170 262 166 236 Z" fill="url(#musc)" stroke="#9d3616" stroke-width="1.2"/>
+    <path d="M242 214 Q226 226 216 242 Q210 270 212 300 Q222 296 232 286 Q242 262 246 236 Z" fill="url(#musc)" stroke="#9d3616" stroke-width="1.2"/>
+    <!-- teres / rear delt (target) -->
+    <path d="M162 206 Q170 198 182 202 Q178 214 170 220 Q160 216 162 206 Z" fill="url(#musc)" stroke="#9d3616" stroke-width="1"/>
+    <path d="M250 206 Q242 198 230 202 Q234 214 242 220 Q252 216 250 206 Z" fill="url(#musc)" stroke="#9d3616" stroke-width="1"/>
+    <!-- spine line -->
+    <path d="M206 236 Q205 278 206 314" fill="none" stroke="#8a8a8a" stroke-width="1.5"/>
+
+    <!-- head -->
+    <path d="M196 196 L216 196 L214 182 L198 182 Z" fill="#bdbdbd"/>
+    <ellipse cx="206" cy="168" rx="17" ry="20" fill="url(#skin)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <path d="M189 164 Q192 146 206 146 Q221 146 223 164 Q214 156 206 156 Q197 156 189 164 Z" fill="#6a6a6a"/>
+
+    <!-- left arm (upper + forearm, raised) -->
+    <path d="M166 208 Q150 196 146 176 Q144 166 152 164 Q160 176 176 196 Z" fill="url(#skinArm)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <path d="M146 172 Q150 152 168 134 L176 140 Q162 156 156 176 Z" fill="url(#skinArm)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <!-- right arm -->
+    <path d="M246 208 Q262 196 262 176 Q262 164 254 164 Q248 178 236 196 Z" fill="url(#skinArm)" stroke="#6f6f6f" stroke-width="1.5"/>
+    <path d="M262 172 Q258 150 240 132 L232 138 Q246 154 252 176 Z" fill="url(#skinArm)" stroke="#6f6f6f" stroke-width="1.5"/>
+
+    <!-- near lever arm (in front) -->
+    <path d="M352 266 L178 104 L192 94 L364 254 Z" fill="url(#metal)" stroke="#7d8287" stroke-width="2"/>
+    <line x1="185" y1="99" x2="182" y2="134" stroke="#8d9297" stroke-width="5"/>
+    <!-- handles gripped -->
+    <rect x="164" y="128" width="20" height="10" rx="5" fill="#3a3c3f" transform="rotate(-20 174 133)"/>
+    <rect x="226" y="124" width="20" height="10" rx="5" fill="#3a3c3f" transform="rotate(20 236 129)"/>
+    <!-- hands -->
+    <circle cx="172" cy="134" r="7" fill="#c4c4c4" stroke="#6f6f6f" stroke-width="1.2"/>
+    <circle cx="236" cy="130" r="7" fill="#c4c4c4" stroke="#6f6f6f" stroke-width="1.2"/>
+  </g>
+</svg>
