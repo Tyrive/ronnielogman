@@ -324,6 +324,12 @@ html.lock,html.lock body{overflow:hidden}
 .saveask .acts .btn{flex:1 1 140px}
 .saveask .acts .go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .card.needs{border-color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn)}
+.chartbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:-2px}
+.chartbar .rng{font:12px var(--mono);color:var(--muted)}
+.chartbar .zbtn{display:flex;gap:6px}
+.chartbar .btn{min-width:38px;padding:6px 10px}
+.chartbar .btn:disabled{opacity:.35;cursor:default}
+canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .pickbody{display:flex;flex-direction:column;gap:10px}
 .pickclose{align-self:center}
 @media (prefers-reduced-motion:reduce){.pickhead .plus,.pickhead .chev{transition:none}}
@@ -1001,26 +1007,97 @@ function doSave(){
 }
 
 /* Fortschritt */
+/* Diagramm: zoomen (Mausrad, Pinch, Knöpfe) und Linie mit Datum beim Überfahren */
+const CH={};
+const dfull=t=>{const d=new Date(t);return WD[(d.getDay()+6)%7]+', '+pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+String(d.getFullYear()).slice(2)};
 function drawLine(cv,pts,o){
-  const dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W)return;
+  let st=CH[cv.id];if(!st){st=CH[cv.id]={cv,view:null,hover:null};initChart(st)}
+  if(st.key!==o.key){st.view=null;st.hover=null}
+  st.key=o.key;st.pts=pts;st.o=o;if(st.hover!=null&&st.hover>=pts.length)st.hover=null;
+  paint(st);
+}
+function fullRange(st){const p=st.pts;return[p[0].x,p[p.length-1].x]}
+function paint(st){
+  const {cv,pts,o}=st,dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W)return;
   cv.width=W*dpr;cv.height=H*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,W,H);
   const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
-  const fs=W<380?12:13;c.font=fs+'px "IBM Plex Mono",monospace';c.fillStyle=col('--muted');
-  if(pts.length<2){c.fillText(pts.length?'Ab zwei Einträgen gibt es ein Diagramm':'Noch keine Daten',8,H/2);return}
-  let ys=pts.map(p=>p.y),mn=Math.min(...ys),mx=Math.max(...ys);if(mn===mx){mn-=1;mx+=1}const pd=(mx-mn)*.12;mn-=pd;mx+=pd;
+  const fs=W<380?12:13,mono='"IBM Plex Mono",monospace';c.font=fs+'px '+mono;c.fillStyle=col('--muted');
+  if(pts.length<2){c.fillText(pts.length?'Ab zwei Einträgen gibt es ein Diagramm':'Noch keine Daten',8,H/2);st.geo=null;updBar(st);return}
+  const [f0,f1]=fullRange(st);let [a,b]=st.view||[f0,f1];if(b-a<=0){a-=864e5;b+=864e5}
+  const vis=pts.filter(p=>p.x>=a&&p.x<=b),ys=(vis.length?vis:pts).map(p=>p.y);
+  let mn=Math.min(...ys),mx=Math.max(...ys);if(mn===mx){mn-=1;mx+=1}const pd=(mx-mn)*.12;mn-=pd;mx+=pd;
   const ticks=[0,1,2,3].map(i=>mn+(mx-mn)*(i+.5)/4);
-  const L=Math.ceil(Math.max(...ticks.map(v=>c.measureText(o.f(v)).width)))+12,R=14,T=12,B=26;
-  const x0=pts[0].x,x1=pts[pts.length-1].x;
-  const X=x=>L+(x1===x0?.5:(x-x0)/(x1-x0))*(W-L-R),Y=y=>o.invert?T+(y-mn)/(mx-mn)*(H-T-B):H-B-(y-mn)/(mx-mn)*(H-T-B);
+  const L=Math.ceil(Math.max(...ticks.map(v=>c.measureText(o.f(v)).width)))+12,R=14,T=12,B=26,PW=W-L-R;
+  const X=x=>L+(x-a)/(b-a)*PW,Y=y=>o.invert?T+(y-mn)/(mx-mn)*(H-T-B):H-B-(y-mn)/(mx-mn)*(H-T-B);
   c.strokeStyle=col('--line');c.lineWidth=1;c.textAlign='right';c.textBaseline='middle';
   ticks.forEach(v=>{const y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(W-R,y);c.stroke();c.fillText(o.f(v),L-8,y)});
-  c.textBaseline='alphabetic';c.textAlign='left';const dl=t=>{const d=new Date(t);return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'};
-  c.fillText(dl(x0),L,H-6);c.textAlign='right';c.fillText(dl(x1),W-R,H-6);
+  const yr=b-a>300*864e5,dl=t=>{const d=new Date(t);return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+(yr?String(d.getFullYear()).slice(2):'')};
+  c.textBaseline='alphabetic';c.textAlign='left';c.fillText(dl(a),L,H-6);c.textAlign='right';c.fillText(dl(b),W-R,H-6);
   const color=col(o.color);
+  c.save();c.beginPath();c.rect(L-6,0,PW+12,H-B+1);c.clip();
   c.beginPath();pts.forEach((p,i)=>i?c.lineTo(X(p.x),Y(p.y)):c.moveTo(X(p.x),Y(p.y)));
   c.lineTo(X(pts[pts.length-1].x),H-B);c.lineTo(X(pts[0].x),H-B);c.closePath();c.globalAlpha=.12;c.fillStyle=color;c.fill();c.globalAlpha=1;
   c.beginPath();pts.forEach((p,i)=>i?c.lineTo(X(p.x),Y(p.y)):c.moveTo(X(p.x),Y(p.y)));c.strokeStyle=color;c.lineWidth=2.2;c.lineJoin='round';c.stroke();
-  pts.forEach((p,i)=>{c.beginPath();c.arc(X(p.x),Y(p.y),i===pts.length-1?5:2.8,0,7);c.fillStyle=i===pts.length-1?color:col('--surface');c.fill();c.strokeStyle=color;c.lineWidth=2;c.stroke()});
+  const zoomed=!!st.view,r0=zoomed?3.6:2.8;
+  pts.forEach((p,i)=>{if(p.x<a||p.x>b)return;c.beginPath();c.arc(X(p.x),Y(p.y),i===pts.length-1?5:r0,0,7);c.fillStyle=i===pts.length-1?color:col('--surface');c.fill();c.strokeStyle=color;c.lineWidth=2;c.stroke()});
+  c.restore();
+  const h=st.hover!=null?pts[st.hover]:null;
+  if(h&&h.x>=a&&h.x<=b){
+    const hx=X(h.x),hy=Y(h.y);
+    c.save();c.strokeStyle=col('--ink');c.globalAlpha=.55;c.setLineDash([4,4]);c.lineWidth=1;c.beginPath();c.moveTo(hx,T);c.lineTo(hx,H-B);c.stroke();c.restore();
+    c.beginPath();c.arc(hx,hy,6.5,0,7);c.fillStyle=color;c.fill();c.lineWidth=2.5;c.strokeStyle=col('--surface');c.stroke();
+    const t1=dfull(h.x),t2=o.f(h.y);c.font='600 '+fs+'px '+mono;const w1=c.measureText(t1).width;c.font='700 '+(fs+2)+'px '+mono;const w2=c.measureText(t2).width;
+    const bw=Math.max(w1,w2)+18,bh=fs*2+20;let bx=hx-bw/2;bx=Math.max(L,Math.min(W-R-bw,bx));const by=hy-T>bh+16||!o.invert&&hy>H/2?T:H-B-bh-4;
+    c.fillStyle=col('--surface2');c.strokeStyle=col('--line');c.lineWidth=1;c.beginPath();c.roundRect?c.roundRect(bx,by,bw,bh,6):c.rect(bx,by,bw,bh);c.fill();c.stroke();
+    c.textAlign='left';c.textBaseline='top';c.font='600 '+fs+'px '+mono;c.fillStyle=col('--muted');c.fillText(t1,bx+9,by+7);
+    c.font='700 '+(fs+2)+'px '+mono;c.fillStyle=col('--ink');c.fillText(t2,bx+9,by+9+fs);
+  }
+  st.geo={L,R,W,PW,a,b,X};updBar(st);
+}
+function updBar(st){
+  const bar=st.bar;if(!bar)return;const ok=!!st.geo;bar.hidden=!ok;if(!ok)return;
+  const {a,b}=st.geo,n=st.pts.filter(p=>p.x>=a&&p.x<=b).length;
+  bar.querySelector('.rng').textContent=(st.view?'Ausschnitt · ':'Alles · ')+n+(n===1?' Einheit':' Einheiten');
+  bar.querySelector('[data-z="reset"]').disabled=!st.view;bar.querySelector('[data-z="out"]').disabled=!st.view;
+}
+function zoomChart(st,f,cx){
+  const g=st.geo;if(!g)return;const [f0,f1]=fullRange(st),span0=f1-f0;if(span0<=0)return;
+  let [a,b]=st.view||[f0,f1];const t=cx==null?(a+b)/2:a+Math.max(0,Math.min(1,(cx-g.L)/g.PW))*(b-a),k=(t-a)/(b-a);
+  let span=Math.max(Math.min(span0,5*864e5),Math.min(span0,(b-a)*f));a=t-k*span;b=a+span;
+  if(a<f0){a=f0;b=a+span}if(b>f1){b=f1;a=b-span}st.view=span>=span0-1?null:[a,b];paint(st);
+}
+function panChart(st,dx){
+  const g=st.geo;if(!g||!st.view)return;const [f0,f1]=fullRange(st);let [a,b]=st.view;const dt=dx/g.PW*(b-a);a-=dt;b-=dt;
+  if(a<f0){b+=f0-a;a=f0}if(b>f1){a-=b-f1;b=f1}st.view=[a,b];paint(st);
+}
+function hoverAt(st,px){
+  const g=st.geo;if(!g)return;let best=null,bd=1e9;
+  st.pts.forEach((p,i)=>{if(p.x<g.a||p.x>g.b)return;const d=Math.abs(g.X(p.x)-px);if(d<=bd){bd=d;best=i}});
+  if(best!==st.hover){st.hover=best;paint(st)}
+}
+function initChart(st){
+  const cv=st.cv;cv.style.touchAction='pan-y';cv.style.cursor='crosshair';
+  const bar=document.createElement('div');bar.className='chartbar';
+  bar.innerHTML='<span class="rng"></span><span class="zbtn"><button class="btn small" data-z="out" aria-label="Herauszoomen">−</button><button class="btn small" data-z="in" aria-label="Hineinzoomen">+</button><button class="btn small" data-z="reset">Alles</button></span>';
+  cv.after(bar);st.bar=bar;
+  bar.addEventListener('click',e=>{const b=e.target.closest('[data-z]');if(!b||b.disabled)return;const z=b.dataset.z;
+    if(z==='in')zoomChart(st,.5,st.hover!=null&&st.geo?st.geo.X(st.pts[st.hover].x):null);else if(z==='out')zoomChart(st,2);else{st.view=null;paint(st)}});
+  const ptrs=new Map();let pinch=null,drag=null;
+  const pos=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+  cv.addEventListener('pointerdown',e=>{const p=pos(e);ptrs.set(e.pointerId,p);
+    if(ptrs.size===2){const [p1,p2]=[...ptrs.values()];pinch={d:Math.hypot(p1.x-p2.x,p1.y-p2.y),cx:(p1.x+p2.x)/2};st.hover=null;paint(st);return}
+    if(e.pointerType==='mouse'&&st.view){drag={x:p.x,moved:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}}
+    hoverAt(st,p.x)});
+  cv.addEventListener('pointermove',e=>{const p=pos(e);if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,p);
+    if(ptrs.size>=2&&pinch){const [p1,p2]=[...ptrs.values()],d=Math.hypot(p1.x-p2.x,p1.y-p2.y),cx=(p1.x+p2.x)/2;
+      if(d>12&&pinch.d>12)zoomChart(st,pinch.d/d,cx);panChart(st,cx-pinch.cx);pinch={d,cx};return}
+    if(drag&&e.buttons){if(Math.abs(p.x-drag.x)>2){drag.moved=true;cv.style.cursor='grabbing'}panChart(st,p.x-drag.x);drag.x=p.x;if(drag.moved)return}
+    hoverAt(st,p.x)});
+  const end=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;drag=null;cv.style.cursor='crosshair'};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!drag){st.hover=null;paint(st)}});
+  cv.addEventListener('wheel',e=>{if(!st.geo)return;e.preventDefault();zoomChart(st,e.deltaY>0?1.25:.8,pos(e).x)},{passive:false});
+  cv.addEventListener('dblclick',()=>{st.view=null;paint(st)});
 }
 let progEx=null;
 function exStats(){const m=new Map();db.sessions.forEach(s=>{if(s.type!=='kraft')return;(s.exercises||[]).forEach(e=>{const o=m.get(e.name)||{n:0,last:''};o.n++;if(s.date>o.last)o.last=s.date;m.set(e.name,o)})});return m}
@@ -1050,14 +1127,14 @@ function renderProg(){
   $('pMetric').innerHTML=avail.map(m=>`<button class="chip${m.k===mKey?' on':''}" data-pm="${m.k}">${m.l}</button>`).join('');
   const M=EX_METRICS.find(m=>m.k===mKey);
   $('pNote').textContent=M.d;
-  drawLine($('cEx'),rows.map(r=>({x:r.x,y:M.f(r.sets)})),{f:M.fmt,color:'--push'});
+  drawLine($('cEx'),rows.map(r=>({x:r.x,y:M.f(r.sets)})),{f:M.fmt,color:'--push',key:name+'|'+mKey});
 
   const runsAll=db.sessions.filter(s=>s.type==='lauf').sort((a,b)=>a.date.localeCompare(b.date));
   $('rKind').innerHTML=[['alle','Alle','--runx']].concat(RUN_KINDS).map(c=>`<button class="chip${c[0]===rKindSel?' on':''}" data-rk="${c[0]}">${c[0]==='alle'?'':mkRaw('ring',c[2])}${c[1]}</button>`).join('');
   $('rMetric').innerHTML=RUN_METRICS.map(m=>`<button class="chip${m.k===rMetric?' on':''}" data-rm="${m.k}">${m.l}</button>`).join('');
   const RM=RUN_METRICS.find(m=>m.k===rMetric),rsel=runsAll.filter(r=>rKindSel==='alle'||runKind(r)===rKindSel).filter(r=>RM.f(r)!=null);
   $('rNote').textContent=RM.d;
-  drawLine($('cRun'),rsel.map(r=>({x:parseD(r.date).getTime(),y:RM.f(r)})),{f:RM.fmt,color:rKindSel==='alle'?'--z2':RUN_KINDS.find(c=>c[0]===rKindSel)[2],invert:RM.inv});
+  drawLine($('cRun'),rsel.map(r=>({x:parseD(r.date).getTime(),y:RM.f(r)})),{f:RM.fmt,color:rKindSel==='alle'?'--z2':RUN_KINDS.find(c=>c[0]===rKindSel)[2],invert:RM.inv,key:rMetric+'|'+rKindSel});
   const runs=runsAll;
   const mon=iso(monday(new Date())),wkKm=runs.filter(r=>r.date>=mon).reduce((a,r)=>a+r.dist,0),since=new Date();since.setDate(since.getDate()-28);
   const m4=runs.filter(r=>parseD(r.date)>=since).reduce((a,r)=>a+r.dist,0),bp=runs.length?Math.min(...runs.map(r=>r.sec/r.dist)):0;
@@ -1226,7 +1303,27 @@ function streak(){const days=new Set(db.sessions.map(s=>s.date));let d=todayIso(
 function switchTab(t){tab=t;setMode();document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===t));
   ['cal','train','ex','prog','data'].forEach(k=>$('tab-'+k).hidden=k!==t);$('timer').hidden=t!=='train';renderAll();window.scrollTo(0,0)}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab)});
-function renderAll(){renderHead();if(tab==='cal')renderCal();if(tab==='train')renderTrain();if(tab==='ex')renderCx();if(tab==='prog')renderProg();if(tab==='data')renderData()}
+/* Importierte Trainings (FitNotes) dem passenden eigenen Plan zuordnen, z. B. Schultertage → Plan „Schulter“ */
+const GROUP_WORDS={'Schultern':['schulter','shoulder','delt'],'Brust':['brust','chest'],'Rücken':['rucken','ruecken','back'],'Beine':['bein','leg'],'Bizeps':['bizeps','biceps','arm'],'Trizeps':['trizeps','triceps','arm'],'Core':['core','bauch','abs']};
+function planForGroup(g){const w=GROUP_WORDS[g]||[];return db.plans.find(p=>{const n=norm(p.name);return w.some(a=>n.startsWith(a)||n.includes(' '+a))})}
+function domGroup(s){const c=new Map();let tot=0;(s.exercises||[]).forEach(e=>{const i=libInfo(e.name),g=i&&i.m,n=(e.sets||[]).length||1;tot+=n;if(g)c.set(g,(c.get(g)||0)+n)});
+  let best=null,bn=0;c.forEach((n,g)=>{if(n>bn){bn=n;best=g}});return best&&bn/tot>=.5?best:null}
+let fixSig='';
+function fixImportedPlans(){
+  const sig=db.sessions.length+'|'+db.plans.map(p=>p.id+p.name+p.exercises.length).join(',');if(sig===fixSig)return;fixSig=sig;
+  const latest=new Map();let moved=0;
+  db.sessions.forEach(s=>{
+    if(s.type!=='kraft'||!String(s.id).startsWith('fn-'))return;
+    const cur=planOf(s);if(cur&&cur.name!=='Gym')return;
+    const g=domGroup(s),p=g&&planForGroup(g);if(!p||p.name==='Gym')return;
+    if(s.planId!==p.id){s.planId=p.id;s.title=p.name;s.color=p.color;moved++}
+    if(!p.exercises.length&&(!latest.has(p.id)||s.date>latest.get(p.id).date))latest.set(p.id,s);
+  });
+  const filled=[];latest.forEach((s,id)=>{const p=db.plans.find(x=>x.id===id);if(p&&!p.exercises.length){p.exercises=s.exercises.map(e=>e.name);filled.push(p.name)}});
+  if(moved||filled.length){fixSig='';persist();
+    setTimeout(()=>toast((moved?moved+' importierte Trainings neu zugeordnet':'')+(moved&&filled.length?' · ':'')+(filled.length?'Plan '+filled.join(', ')+' mit Übungen gefüllt':'')),400);return true}
+}
+function renderAll(){fixImportedPlans();renderHead();if(tab==='cal')renderCal();if(tab==='train')renderTrain();if(tab==='ex')renderCx();if(tab==='prog')renderProg();if(tab==='data')renderData()}
 window.addEventListener('resize',()=>{if(tab==='prog')renderProg()});
 
 /* Pausentimer */

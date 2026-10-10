@@ -1,6 +1,6 @@
 // RonnieLogman Service Worker
 // Bei jedem Update der App diese Versionsnummer erhöhen (z. B. v2, v3 ...).
-const CACHE = 'ronnielogman-v7';
+const CACHE = 'ronnielogman-v8';
 const APP_SHELL = [
   './',
   './index.html',
