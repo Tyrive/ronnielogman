@@ -174,13 +174,33 @@ body,.card,.tabs,.day,.entry{transition:background-color .35s,border-color .35s,
 .calnav .btn{padding:8px 0;font-size:20px;line-height:1}
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal .wd{font-size:11px;text-align:center;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding-bottom:2px}
-.cd{min-height:58px;border:1px solid var(--line);border-radius:9px;background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px 2px;cursor:pointer;font:inherit;color:var(--ink);min-width:0}
-.cd.out{opacity:.38}
-.cd.today{border:2px solid var(--accent)}
-.cd .n{font-family:var(--mono);font-size:13px;line-height:1.1}
+.cd{min-height:50px;border:0;border-radius:8px;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px 2px;cursor:pointer;font:inherit;color:var(--ink);min-width:0}
+.cd.out{visibility:hidden}
+.cd.today .n{box-shadow:0 0 0 2px var(--accent);color:var(--ink);font-weight:700}
+.cd .n{font-family:var(--mono);font-size:13px;line-height:1;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;color:var(--muted)}
 .cd .dots{gap:3px}
 .cd .mk{width:11px;height:11px}
-.cd.has{background:var(--surface2)}
+.cd.has .n{background:var(--surface2);color:var(--ink);font-weight:600}
+.cd:hover .n{background:var(--line)}
+.cd:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cd .dots{min-height:11px}
+.cal .wd:nth-child(6),.cal .wd:nth-child(7){opacity:.6}
+.caltitle{border:0;background:none;color:var(--ink);font:700 20px var(--display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;padding:6px 4px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px}
+.caltitle::after{content:"▾";font-size:13px;color:var(--muted);transition:transform .2s}
+.caltitle[aria-expanded="true"]::after{transform:rotate(180deg)}
+.caltitle:hover{background:var(--surface2)}
+.calToday{align-self:center;border:0;background:none;color:var(--accent);font:600 13px var(--body);cursor:pointer;padding:2px 8px;margin-top:-4px}
+.ympick{display:flex;flex-direction:column;gap:10px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface2)}
+.ynav{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;text-align:center}
+.ynav b{font:700 22px var(--mono)}
+.ynav .btn{padding:6px 0;font-size:18px;line-height:1}
+.mgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.mgrid button{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 2px;font:600 14px var(--body);cursor:pointer}
+.mgrid button small{font:500 11px var(--mono);color:var(--muted)}
+.mgrid button.has small{color:var(--accent)}
+.mgrid button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.mgrid button.now{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.calhint{text-align:center;font-size:12px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}
 .stat{display:flex;flex-direction:column;gap:2px}
 .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
@@ -426,11 +446,16 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   <!-- KALENDER -->
   <section class="panel" id="tab-cal" hidden>
     <div class="card">
-      <div class="calnav"><button class="btn" id="calPrev" aria-label="Vorheriger Monat">‹</button><h2 id="calTitle"></h2><button class="btn" id="calNext" aria-label="Nächster Monat">›</button></div>
+      <div class="calnav"><button class="btn" id="calPrev" aria-label="Vorheriger Monat">‹</button><button class="caltitle" id="calTitle" aria-expanded="false" aria-controls="ymPick"></button><button class="btn" id="calNext" aria-label="Nächster Monat">›</button></div>
+      <div class="ympick" id="ymPick" hidden>
+        <div class="ynav"><button class="btn" id="yPrev" aria-label="Vorheriges Jahr">‹</button><b id="yTitle"></b><button class="btn" id="yNext" aria-label="Nächstes Jahr">›</button></div>
+        <div class="mgrid" id="mGrid"></div>
+      </div>
+      <button class="calToday" id="calToday" hidden>Zurück zu heute</button>
       <div class="cal" id="cal"></div>
-      <div class="muted">Tippe auf einen Tag, um ihn im Reiter Training zu öffnen.</div>
+      <div class="muted calhint">Tippe auf einen Tag, um ihn im Reiter Training zu öffnen.</div>
     </div>
-    <div class="card"><h2>Dieser Monat</h2><div class="stats" id="calStats"></div></div>
+    <div class="card"><h2 id="calStatsTitle">Dieser Monat</h2><div class="stats" id="calStats"></div></div>
     <div class="card"><h2>Legende</h2><div class="legend" id="legend"></div></div>
   </section>
 
@@ -920,6 +945,9 @@ $('week').addEventListener('click',e=>{const b=e.target.closest('[data-date]');i
 function renderCal(){renderLegend();
   const y=calMonth.getFullYear(),m=calMonth.getMonth();
   $('calTitle').textContent=calMonth.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+  const now=new Date();$('calToday').hidden=y===now.getFullYear()&&m===now.getMonth();
+  $('calStatsTitle').textContent=calMonth.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+  if(!$('ymPick').hidden)renderYM();
   const start=monday(new Date(y,m,1));let html=WD.map(w=>`<div class="wd">${w}</div>`).join('');
   for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);if(i%7===0&&i>=28&&d.getMonth()!==m)break;
     const ds=iso(d),ss=sessionsOn(ds);
@@ -935,6 +963,27 @@ function renderLegend(){$('legend').innerHTML='<h3>Kraft · gefüllt</h3>'+db.pl
 const BETA='<span class="beta">Beta · in Arbeit</span>';
 $('cal').addEventListener('click',e=>{const b=e.target.closest('[data-date]');if(b)openDay(b.dataset.date)});
 $('calPrev').addEventListener('click',()=>{calMonth.setMonth(calMonth.getMonth()-1);renderCal()});
+/* Monats- und Jahresauswahl */
+let ymYear=null;
+const MON=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+function renderYM(){
+  if(ymYear===null)ymYear=calMonth.getFullYear();$('yTitle').textContent=ymYear;
+  const days=new Map();db.sessions.forEach(s=>{if(s.date.startsWith(ymYear+'-')){const k=+s.date.slice(5,7)-1;if(!days.has(k))days.set(k,new Set());days.get(k).add(s.date)}});
+  const now=new Date();
+  $('mGrid').innerHTML=MON.map((n,i)=>{const c=days.has(i)?days.get(i).size:0;const on=ymYear===calMonth.getFullYear()&&i===calMonth.getMonth(),isNow=ymYear===now.getFullYear()&&i===now.getMonth();
+    return`<button data-mon="${i}" class="${c?'has':''}${on?' on':''}${isNow?' now':''}" aria-label="${n} ${ymYear}: ${c} Trainingstage">${n}<small>${c?c+' Tage':'–'}</small></button>`}).join('');
+}
+function openYM(o){$('ymPick').hidden=!o;$('calTitle').setAttribute('aria-expanded',String(o));if(o){ymYear=calMonth.getFullYear();renderYM()}}
+$('calTitle').addEventListener('click',()=>openYM($('ymPick').hidden));
+$('yPrev').addEventListener('click',()=>{ymYear--;renderYM()});
+$('yNext').addEventListener('click',()=>{ymYear++;renderYM()});
+$('mGrid').addEventListener('click',e=>{const b=e.target.closest('[data-mon]');if(!b)return;calMonth=new Date(ymYear,+b.dataset.mon,1);openYM(false);renderCal()});
+/* Wischen im Kalender wechselt den Monat */
+(()=>{let x0=null,y0=0;const c=$('cal');
+  c.addEventListener('touchstart',e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY},{passive:true});
+  c.addEventListener('touchend',e=>{if(x0===null)return;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){calMonth.setMonth(calMonth.getMonth()+(dx<0?1:-1));renderCal()}},{passive:true})})();
+$('calToday').addEventListener('click',()=>{const n=new Date();calMonth=new Date(n.getFullYear(),n.getMonth(),1);openYM(false);renderCal()});
 $('calNext').addEventListener('click',()=>{calMonth.setMonth(calMonth.getMonth()+1);renderCal()});
 function openDay(ds){if(editingId)cancelEdit();selDate=ds;switchTab('train')}
 
