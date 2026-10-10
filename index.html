@@ -248,6 +248,20 @@ canvas{width:100%;height:210px;display:block}
   .timer .lbl{display:none}
 }
 .timer .btn{white-space:nowrap}
+.timer .clock{cursor:pointer}
+.timer:not(.run) .clock{color:var(--muted)}
+.timer .tgo{min-width:86px;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.timer.run .tgo{background:var(--surface2);border-color:var(--line);color:var(--ink)}
+.timer .tgear{display:grid;place-items:center;width:40px;height:40px;padding:0;color:var(--muted);border-radius:50%}
+.timer .tgear:hover,.timer.setting .tgear{color:var(--ink);background:var(--surface2)}
+.timer.setting .tgear svg{transform:rotate(60deg)}
+.timer .tgear svg{transition:transform .3s}
+.tset{max-width:560px;margin:0 auto 10px;display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface2)}
+.tset-h{display:flex;align-items:center;justify-content:space-between}
+.tset-h b{font:600 17px var(--display);text-transform:uppercase;letter-spacing:.05em}
+.tstep{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.tstep span{font:500 26px var(--mono);text-align:center;min-width:80px}
+@media (prefers-reduced-motion:reduce){.timer .tgear svg{transition:none}}
 .timer .clock{margin-right:auto}
 .timer{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:10}
 .timer .in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:8px}
@@ -325,6 +339,11 @@ html.lock,html.lock body{overflow:hidden}
 .picker,#editBar{scroll-margin-top:calc(64px + env(safe-area-inset-top,0px))}
 .exacts{display:flex;align-items:center;gap:2px;flex:none}
 .exacts .icon{display:grid;place-items:center;width:34px;height:34px;padding:0}
+.exacts .mv{width:28px;font-size:17px;color:var(--muted)}
+.exacts .mv:disabled{opacity:.25;cursor:default;background:none}
+.card.moved{animation:moved .7s ease-out}
+@keyframes moved{0%{box-shadow:inset 0 0 0 2px var(--accent)}100%{box-shadow:inset 0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.card.moved{animation:none}}
 .exacts .swap{color:var(--accent)}
 .exacts .swap:hover,.exacts .icon:hover{background:var(--surface2)}
 .exconfirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:6px;background:color-mix(in srgb,var(--warn) 12%,var(--surface));font-size:14px;font-weight:600}
@@ -583,11 +602,18 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   </section>
 </div>
 
-<div class="timer" id="timer"><div class="in">
-  <span class="clock" id="clock">0:00</span><span class="lbl">Pause</span>
-  <button class="btn small" data-t="60">60 s</button><button class="btn small" data-t="90">90 s</button><button class="btn small" data-t="120">2 min</button>
-  <button class="icon" id="tStop" aria-label="Timer stoppen">✕</button>
-</div></div>
+<div class="timer" id="timer">
+  <div class="tset" id="tSet" hidden role="dialog" aria-label="Pausenzeit einstellen">
+    <div class="tset-h"><b>Pausenzeit</b><button class="icon" id="tSetX" aria-label="Schließen">✕</button></div>
+    <div class="tstep"><button class="btn" data-tstep="-15" aria-label="15 Sekunden weniger">−15 s</button><span id="tSetVal">1:30</span><button class="btn" data-tstep="15" aria-label="15 Sekunden mehr">+15 s</button></div>
+    <div class="chips" id="tPresets"></div>
+  </div>
+  <div class="in">
+    <span class="clock" id="clock">1:30</span><span class="lbl" id="tLbl">Pause</span>
+    <button class="btn tgo" id="tGo">Start</button>
+    <button class="icon tgear" id="tGear" aria-label="Pausenzeit einstellen" aria-expanded="false" aria-controls="tSet"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+</div>
 
 <script>
 const KEY='ronnielogman.v1';
@@ -967,7 +993,7 @@ function renderExList(){
   $('noteWrap').hidden=type==='kraft'&&!ready;$('save').hidden=type==='kraft'&&!ready;
   if(!draft.exercises.length){$('exList').innerHTML=ready?'<div class="card muted">Noch keine Übungen. Füge unten eine hinzu.</div>':'';return}
   $('exList').innerHTML=draft.exercises.map((e,i)=>{const l=lastFor(e.name),inf=libInfo(e.name);return`<div class="card${swapIdx===i?' swapping':''}" id="exc${i}">
-    <div class="ex-head"><div class="exname">${exIcon(e.name)}<div style="min-width:0"><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div></div><div class="exacts"><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
+    <div class="ex-head"><div class="exname">${exIcon(e.name)}<div style="min-width:0"><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div></div><div class="exacts"><button class="icon mv" data-mv="${i}_-1" aria-label="${esc(e.name)} nach oben"${i?'':' disabled'}>↑</button><button class="icon mv" data-mv="${i}_1" aria-label="${esc(e.name)} nach unten"${i<draft.exercises.length-1?'':' disabled'}>↓</button><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
     ${confirmDel===i?`<div class="exconfirm">Übung wirklich entfernen?<button class="btn small yes" data-delex="${i}">Entfernen</button><button class="btn small" data-nodel="1">Abbrechen</button></div>`:''}
     ${inf&&inf.tip?`<div class="cx-tip">Tipp: ${esc(inf.tip)}</div>`:''}
     ${l?`<div class="last">Zuletzt ${shortDay(l.date)}: ${setsSummary(l.sets)}</div>`:''}
@@ -1003,6 +1029,9 @@ $('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f)draft.e
 $('exList').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(!$('saveAsk').hidden&&!t.dataset.step)hideAsk();
   if(t.dataset.step){const[i,j,f,d]=t.dataset.step.split('_'),set=draft.exercises[+i].sets[+j],v=Math.max(0,Math.round((num(set[f])+(+d))*100)/100);
     set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');return}
+  if(t.dataset.mv){const[i,d]=t.dataset.mv.split('_').map(Number),j=i+d,a=draft.exercises;if(j<0||j>=a.length)return;
+    [a[i],a[j]]=[a[j],a[i]];const fix=x=>x===i?j:x===j?i:x;if(swapIdx!==null)swapIdx=fix(swapIdx);if(confirmDel!==null)confirmDel=fix(confirmDel);
+    renderExList();const c=$('exc'+j);if(c){c.classList.add('moved');c.scrollIntoView({block:'nearest',behavior:SMOOTH()});setTimeout(()=>c.classList.remove('moved'),700);const b=c.querySelector(`[data-mv="${j}_${d}"]`);if(b&&!b.disabled)b.focus({preventScroll:true})}return}
   if(t.dataset.askdel!==undefined){confirmDel=+t.dataset.askdel}
   else if(t.dataset.nodel){confirmDel=null}
   else if(t.dataset.swapex!==undefined){confirmDel=null;startSwap(+t.dataset.swapex);return}
@@ -1392,15 +1421,32 @@ function fixImportedPlans(){
 function renderAll(){fixImportedPlans();renderHead();if(tab==='cal')renderCal();if(tab==='train')renderTrain();if(tab==='ex')renderCx();if(tab==='prog')renderProg();if(tab==='data')renderData()}
 window.addEventListener('resize',()=>{if(tab==='prog')renderProg()});
 
-/* Pausentimer */
+/* Pausentimer: ein Wert, über das Zahnrad einstellbar (Einstellung bleibt auf dem Gerät) */
+const REST_KEY='ronnielogman.rest',REST_PRESETS=[30,45,60,75,90,120,150,180,240,300];
+let rest=90;try{const v=parseInt(localStorage.getItem(REST_KEY),10);if(v>=10&&v<=900)rest=v}catch(e){}
 let tEnd=0,tInt=null,actx=null;
 function beep(){try{if(!actx)return;[0,.3,.6].forEach(t=>{const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=880;o.connect(g);g.connect(actx.destination);const s=actx.currentTime+t;g.gain.setValueAtTime(.25,s);g.gain.exponentialRampToValueAtTime(.001,s+.22);o.start(s);o.stop(s+.25)})}catch(e){}}
+const running=()=>!!tInt;
+function idle(){$('clock').textContent=mmss(rest);$('tGo').textContent='Start';$('timer').classList.remove('run');$('tLbl').textContent='Pause'}
 function tick(){const left=Math.max(0,Math.round((tEnd-Date.now())/1000));$('clock').textContent=mmss(left);
-  if(left<=0){clearInterval(tInt);tInt=null;$('timer').classList.remove('run');$('timer').classList.add('flash');beep();setTimeout(()=>$('timer').classList.remove('flash'),2200)}}
-$('timer').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;
-  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume()}catch(err){}
-  tEnd=Date.now()+(+b.dataset.t)*1000;$('timer').classList.add('run');$('timer').classList.remove('flash');clearInterval(tInt);tInt=setInterval(tick,250);tick()});
-$('tStop').addEventListener('click',()=>{clearInterval(tInt);tInt=null;$('timer').classList.remove('run');$('clock').textContent='0:00'});
+  if(left<=0){clearInterval(tInt);tInt=null;$('timer').classList.add('flash');beep();try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+    setTimeout(()=>{$('timer').classList.remove('flash');if(!running())idle()},2200);$('tGo').textContent='Start';$('timer').classList.remove('run');$('tLbl').textContent='Fertig'}}
+function startRest(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume()}catch(err){}
+  tEnd=Date.now()+rest*1000;$('timer').classList.add('run');$('timer').classList.remove('flash');$('tGo').textContent='Stopp';$('tLbl').textContent='läuft';clearInterval(tInt);tInt=setInterval(tick,250);tick()}
+function stopRest(){clearInterval(tInt);tInt=null;idle()}
+$('tGo').addEventListener('click',()=>{running()?stopRest():startRest()});
+$('clock').addEventListener('click',()=>{if(!running())startRest()});
+function setRest(v){rest=Math.max(15,Math.min(600,v));try{localStorage.setItem(REST_KEY,String(rest))}catch(e){}renderRestSet();if(!running())idle()}
+function renderRestSet(){$('tSetVal').textContent=mmss(rest);
+  $('tPresets').innerHTML=REST_PRESETS.map(v=>`<button class="chip${v===rest?' on':''}" data-rest="${v}">${v<60?v+' s':mmss(v)}</button>`).join('')}
+function openRestSet(o){$('tSet').hidden=!o;$('tGear').setAttribute('aria-expanded',String(o));$('timer').classList.toggle('setting',o);if(o)renderRestSet()}
+$('tGear').addEventListener('click',()=>openRestSet($('tSet').hidden));
+$('tSetX').addEventListener('click',()=>openRestSet(false));
+$('tSet').addEventListener('click',e=>{const p=e.target.closest('[data-rest]');if(p){setRest(+p.dataset.rest);setTimeout(()=>openRestSet(false),180);return}
+  const st=e.target.closest('[data-tstep]');if(st)setRest(rest+(+st.dataset.tstep))});
+document.addEventListener('click',e=>{if(!$('tSet').hidden&&!e.target.closest('#timer'))openRestSet(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('tSet').hidden)openRestSet(false)});
+idle();
 
 plDraft.color=freeColor();persist();setMode();renderAll();
 /* Startanimation */
