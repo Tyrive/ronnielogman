@@ -182,6 +182,14 @@ body,.card,.tabs,.day,.entry{transition:background-color .35s,border-color .35s,
 .stat{display:flex;flex-direction:column;gap:2px}
 .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .stat b{font-family:var(--mono);font-weight:500;font-size:17px;font-variant-numeric:tabular-nums}
+.beta{display:inline-block;vertical-align:middle;font:700 10px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.is-beta{position:relative}
+.is-beta .beta-body{display:flex;flex-direction:column;gap:9px;opacity:.4;filter:grayscale(1);pointer-events:none;user-select:none}
+.headrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.legend .off{opacity:.4;filter:grayscale(1)}
+.legend h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.legend h3 .beta{display:inline-block;letter-spacing:.1em}
+.stat.off{opacity:.4;filter:grayscale(1)}
 .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px 12px;font-size:14px}
 .legend span{display:flex;align-items:center;gap:9px}
 .legend h3{grid-column:1/-1;margin-top:4px}
@@ -509,8 +517,9 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       <canvas id="cEx" aria-label="Verlauf der Übung"></canvas>
       <div class="muted" id="pNote"></div>
     </div>
-    <div class="card">
-      <h2>Laufen</h2>
+    <div class="card is-beta" aria-disabled="true">
+      <div class="headrow"><h2>Laufen</h2><span class="beta">Beta · in Arbeit</span></div>
+      <div class="beta-body" inert>
       <div class="stats" id="rStats"></div>
       <h3>Diagramm zeigt</h3>
       <div class="chips" id="rMetric"></div>
@@ -518,6 +527,7 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       <div class="chips" id="rKind"></div>
       <canvas id="cRun" aria-label="Verlauf beim Laufen"></canvas>
       <div class="muted" id="rNote"></div>
+    </div>
     </div>
   </section>
 
@@ -858,11 +868,12 @@ function renderCal(){renderLegend();
   $('cal').innerHTML=html;
   const pre=y+'-'+pad(m+1),ms=db.sessions.filter(s=>s.date.startsWith(pre));
   const km=ms.filter(s=>s.type==='lauf').reduce((a,s)=>a+s.dist,0),days=new Set(ms.map(s=>s.date)).size;
-  $('calStats').innerHTML=`<div class="stat"><span>Trainingstage</span><b>${days}</b></div><div class="stat"><span>Kraft</span><b>${ms.filter(s=>s.type==='kraft').length}</b></div><div class="stat"><span>Läufe</span><b>${ms.filter(s=>s.type==='lauf').length} · ${fmt(km)} km</b></div><div class="stat"><span>Sport</span><b>${ms.filter(s=>s.type==='sport').length}</b></div>`;
+  $('calStats').innerHTML=`<div class="stat"><span>Trainingstage</span><b>${days}</b></div><div class="stat"><span>Kraft</span><b>${ms.filter(s=>s.type==='kraft').length}</b></div><div class="stat off" title="Beta · in Arbeit"><span>Läufe · Beta</span><b>${ms.filter(s=>s.type==='lauf').length} · ${fmt(km)} km</b></div><div class="stat off" title="Beta · in Arbeit"><span>Sport · Beta</span><b>${ms.filter(s=>s.type==='sport').length}</b></div>`;
 }
 function renderLegend(){$('legend').innerHTML='<h3>Kraft · gefüllt</h3>'+db.plans.map(p=>`<span>${mkRaw('fill',p.color,0,1)}${esc(p.name)}</span>`).join('')+`<span>${mkRaw('fill',FREE_COLOR,0,1)}Frei</span>`
-  +'<h3>Lauf · Ring</h3>'+RUN_KINDS.map(c=>`<span>${mkRaw('ring',c[2],0,1)}${c[1]}</span>`).join('')
-  +'<h3>Sport · gestreift</h3>'+SPORTS.map(c=>`<span>${mkRaw('stripe',c[1],0,1)}${c[0]}</span>`).join('')}
+  +'<h3>Lauf · Ring'+BETA+'</h3>'+RUN_KINDS.map(c=>`<span class="off">${mkRaw('ring',c[2],0,1)}${c[1]}</span>`).join('')
+  +'<h3>Sport · gestreift'+BETA+'</h3>'+SPORTS.map(c=>`<span class="off">${mkRaw('stripe',c[1],0,1)}${c[0]}</span>`).join('')}
+const BETA='<span class="beta">Beta · in Arbeit</span>';
 $('cal').addEventListener('click',e=>{const b=e.target.closest('[data-date]');if(b)openDay(b.dataset.date)});
 $('calPrev').addEventListener('click',()=>{calMonth.setMonth(calMonth.getMonth()-1);renderCal()});
 $('calNext').addEventListener('click',()=>{calMonth.setMonth(calMonth.getMonth()+1);renderCal()});
