@@ -558,6 +558,13 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       <div id="fnActs" hidden style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fnGo" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Übernehmen</button><button class="btn" id="fnNo">Abbrechen</button></div>
     </div>
     <div class="card">
+      <h2>Aus RepCount übernehmen</h2>
+      <p class="muted" style="margin:0">In RepCount die Trainings als <b>CSV</b> exportieren und die Datei hier auswählen. Übernommen werden Datum, Übungen, Gewicht, Wiederholungen und Notizen. Die Datei wird nur auf diesem Gerät gelesen.</p>
+      <div><button class="btn" id="rcPick">RepCount-Datei auswählen</button><input type="file" id="rcFile" accept=".csv,text/csv,text/plain,*/*" hidden></div>
+      <div class="muted" id="rcPrev" aria-live="polite"></div>
+      <div id="rcActs" hidden style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="rcGo" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Übernehmen</button><button class="btn" id="rcNo">Abbrechen</button></div>
+    </div>
+    <div class="card">
       <h2>Backup</h2>
       <p class="muted" style="margin:0" id="dataHint">Deine Daten liegen nur in diesem Browser. Kopiere das Backup gelegentlich in eine Notiz oder Datei.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="exp">Backup erzeugen</button><button class="btn" id="copy">Kopieren</button></div>
@@ -721,25 +728,25 @@ const MUSCLES=['Alle','Brust','Rücken','Schultern','Bizeps','Trizeps','Beine','
 const EQUIP=['Alle','Langhantel','SZ-Stange','Kurzhantel','Kettlebell','Kabelzug','Maschine','Körpergewicht','Band'];
 /* Übungs-Icons (icons/ex/*.svg): erst exakte Namen, dann Stichworte – auch für importierte Namen */
 const EX_ICON_RULES=[
-  ['uni-hammercurl',['einarmig hammer','single arm hammer','uni hammer','one arm hammer']],
+  ['uni-hammercurl',['einarmig hammer','single arm hammer','uni hammer','one arm hammer','hammer curls kabel uni']],
   ['hammercurl',['hammercurl','hammer curl']],
   ['reverse-butterfly',['reverse butterfly','reverse fly','reverse flys','rear delt']],
-  ['butterfly-maschine',['butterfly','pec deck','chest fly machine']],
+  ['butterfly-maschine',['butterfly','pec deck','chest fly machine','pectoral fly']],
   ['overhead-trizeps',['overhead tri','uberkopf-trizeps','uberkopf trizeps','ueberkopf']],
-  ['trizepsdruecken-kabel',['trizepsdrucken am kabel','triceps pushdown','tricep pushdown','pushdown','rope pressdown']],
-  ['latzug-nautilus',['latzug','lat pull','lat pulldown']],
+  ['trizepsdruecken-kabel',['trizepsdrucken am kabel','trizepsdrucken kabel','kabelzug-trizeps','kabelzug trizeps','triceps pushdown','tricep pushdown','pushdown','rope pressdown']],
+  ['latzug-nautilus',['latzug','lat pull','lat pulldown','iso lat','lat iso']],
   ['schraegbankdruecken-kh',['schragbankdrucken (kh)','incline dumbbell','incline db']],
   ['schulterdruecken-kh',['schulterdrucken (kh)','arnold press','dumbbell shoulder press','db shoulder press','schulterdrucken kh']],
   ['seitheben-maschine',['seitheben','lateral raise','lateral raiese','lateral rais']],
-  ['vertical-chest-press',['brustpresse','chest press','vertical press']],
+  ['vertical-chest-press',['brustpresse','chest press','vertical press','vertical chest']],
   ['beinpresse',['beinpresse','leg press']],
-  ['hackenschmidt',['hackenschmi','hack squat']],
-  ['beinstrecker',['beinstrecker','leg extension']],
+  ['hackenschmidt',['hackenschmi','hack squat','pendulum squat','pendolum squat']],
+  ['beinstrecker',['beinstreck','leg extension']],
   ['beinbeuger-sitzend',['beinbeuger sitzend','seated leg curl']],
   ['wadenheben-sitzend',['wadenheben sitzend','seated calf']],
-  ['abduktion',['abduktion','abduktoren','abduction','hip abduct']],
+  ['abduktion',['abduktion','abduktor','abduction','hip abduct']],
   ['hip-thrust-maschine',['hip thrust']],
-  ['bizepscurl-maschine',['bizepsmaschine','bizepscurl maschine','bizeps maschine','machine curl','biceps machine']]
+  ['bizepscurl-maschine',['bizepsmaschine','bizepscurl masch','bizeps maschine','machine curl','biceps machine']]
 ];
 const EX_ICON_SKIP=['straight-arm','straight arm'];
 const exIconCache=new Map();
@@ -1362,7 +1369,7 @@ function fixImportedPlans(){
   const sig=db.sessions.length+'|'+db.plans.map(p=>p.id+p.name+p.exercises.length).join(',');if(sig===fixSig)return;fixSig=sig;
   const latest=new Map();let moved=0;
   db.sessions.forEach(s=>{
-    if(s.type!=='kraft'||!String(s.id).startsWith('fn-'))return;
+    if(s.type!=='kraft'||!/^(fn|rc)-/.test(String(s.id)))return;
     const cur=planOf(s);if(cur&&cur.name!=='Gym')return;
     const g=domGroup(s),p=g&&planForGroup(g);if(!p||p.name==='Gym')return;
     if(s.planId!==p.id){s.planId=p.id;s.title=p.name;s.color=p.color;moved++}
@@ -1498,6 +1505,105 @@ plDraft.color=freeColor();persist();setMode();renderAll();
     r.custom.forEach(c=>{if(!known.has(c.n)&&!libInfo(c.n))db.custom.push(c)});
     persist();renderAll();el('fnActs').hidden=true;
     el('fnPrev').textContent=`${r.fresh.length} Trainings übernommen.`;toast(`${r.fresh.length} Trainings übernommen`);
+  });
+})();
+</script>
+
+<script>
+/* Import aus RepCount (CSV). Übernommen: Datum, Übung, Gewicht, Wdh., Notizen, Kategorie, Trainingsname.
+   Nicht übernommen: kcal, Strecke, Dauer, Körpergewicht. Die Datei wird nur auf dem Gerät gelesen. */
+(function(){
+  const el=id=>document.getElementById(id);
+  const CAT={'brust':'Brust','rucken':'Rücken','schultern':'Schultern','schulter':'Schultern','bizeps':'Bizeps','trizeps':'Trizeps','beine':'Beine','bauch':'Core','core':'Core','po':'Po','waden':'Waden','unterarme':'Unterarme',
+             'chest':'Brust','back':'Rücken','shoulders':'Schultern','biceps':'Bizeps','triceps':'Trizeps','legs':'Beine','abs':'Core'};
+  const ALIAS={'kniebeuge':'Kniebeugen','hammercurl':'Hammercurls','klimmzug (obergriff)':'Klimmzüge','beinstrecken':'Beinstrecker','hack squat':'Hackenschmidt-Kniebeugen',
+               'kurzhantel-schragbankdrucken':'Schrägbankdrücken (KH)','kurzhantel-schulterdrucken':'Schulterdrücken (KH)','kurzhantel-seitheben':'Seitheben (KH)'};
+  const H={start:['beginn des trainings','beginn','start','workout start','date','datum'],ex:['ubung','exercise','exercise name'],w:['gewicht','weight','gewicht (kg)','weight (kg)'],
+           r:['wdh.','wdh','reps','wiederholungen','repetitions'],note:['notizen','notiz','notes','note'],cat:['kategorie','category'],name:['name','workout','workout name','trainingsname'],
+           skip:['kcal','strecke','dauer','korpergewicht','distance','duration','calories','bodyweight','body weight']};
+  let pending=null;
+
+  function parseCSV(text){
+    text=text.replace(/^﻿/,'');const first=text.split(/\r?\n/,1)[0];
+    const d=(first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length?';':',';
+    const rows=[];let row=[],f='',q=false;
+    for(let i=0;i<text.length;i++){const c=text[i];
+      if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c;continue}
+      if(c==='"')q=true;else if(c===d){row.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=c}
+    if(f!==''||row.length){row.push(f);rows.push(row)}
+    return rows.filter(r=>r.some(x=>x.trim()!==''));
+  }
+  const col=(head,keys)=>head.findIndex(h=>keys.includes(norm(h.trim())));
+  const num2=v=>{const n=parseFloat(String(v).trim().replace(',','.'));return Number.isFinite(n)?n:0};
+
+  function read(text){
+    const rows=parseCSV(text);if(rows.length<2)throw new Error('format');
+    const head=rows[0],ix={};for(const k of ['start','ex','w','r','note','cat','name'])ix[k]=col(head,H[k]);
+    if(ix.start<0||ix.ex<0||ix.r<0)throw new Error('format');
+    const dropped=head.filter(h=>H.skip.includes(norm(h.trim()))&&rows.slice(1).some(r=>(r[head.indexOf(h)]||'').trim()!=='')).map(h=>h.trim());
+    const sess=new Map(),catOf=new Map();let skipped=0;
+    for(const r of rows.slice(1)){
+      const start=(r[ix.start]||'').trim(),m=start.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/)||start.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:,?\s+(\d{1,2}):(\d{2}))?/);
+      if(!m){skipped++;continue}
+      const [Y,Mo,D]=m[1].length===4?[m[1],m[2],m[3]]:[m[3],m[2].padStart(2,'0'),m[1].padStart(2,'0')];
+      const date=`${Y}-${Mo}-${D}`,key=date+'T'+(m[4]||'00').padStart(2,'0')+(m[5]||'00');
+      const raw=(r[ix.ex]||'').trim().replace(/\s+/g,' ').slice(0,80),reps=Math.round(num2(r[ix.r]));
+      if(!raw||reps<=0){skipped++;continue}
+      const name=ALIAS[norm(raw)]||(LIB.find(x=>norm(x.n)===norm(raw))||{}).n||raw;
+      const cat=ix.cat>=0?CAT[norm((r[ix.cat]||'').trim())]:null;if(cat&&!catOf.has(name))catOf.set(name,cat);
+      if(!sess.has(key))sess.set(key,{date,key,title:ix.name>=0?(r[ix.name]||'').trim():'',ex:new Map()});
+      const s=sess.get(key);if(!s.ex.has(name))s.ex.set(name,{name,sets:[],notes:[]});
+      const w=Math.round(num2(ix.w>=0?r[ix.w]:0)*100)/100;s.ex.get(name).sets.push({w:w>0?w:'',r:reps});
+      const n=ix.note>=0?(r[ix.note]||'').trim():'';if(n&&!s.ex.get(name).notes.includes(n))s.ex.get(name).notes.push(n.slice(0,200));
+    }
+    const sessions=[];let setCount=0;
+    for(const s of sess.values()){
+      const exercises=[...s.ex.values()].map(e=>{setCount+=e.sets.length;const o={name:e.name,sets:e.sets};if(e.notes.length)o.note=e.notes.join(' / ');return o});
+      const groups=new Set(exercises.map(e=>catOf.get(e.name)||(libInfo(e.name)||{}).m).filter(Boolean));
+      const p=planForWorkout(s.title,groups);
+      const o={id:'rc-'+s.key.replace(/[-T]/g,''),date:s.date,type:'kraft',title:p?p.name:'Frei',note:s.title?('RepCount: '+s.title):'',exercises};
+      if(p){o.planId=p.id;o.color=p.color}sessions.push(o);
+    }
+    const custom=[...new Set(sessions.flatMap(s=>s.exercises.map(e=>e.name)))].filter(n=>!libInfo(n)).map(n=>({n,m:catOf.get(n)||'Eigene',e:'aus RepCount'}));
+    const clean=cleanDb({sessions,custom,goals:db.goals});
+    const have=new Set(db.sessions.map(s=>s.id));
+    return{all:clean.sessions,fresh:clean.sessions.filter(s=>!have.has(s.id)),custom:clean.custom,setCount,exCount:new Set(sessions.flatMap(s=>s.exercises.map(e=>e.name))).size,skipped,dropped};
+  }
+  // Plan wählen: gleicher Name wie ein eigener Plan, sonst nach Muskelgruppen
+  function planForWorkout(title,g){
+    const t=norm(title||'').trim(),by=n=>db.plans.find(p=>norm(p.name)===n);
+    if(t){let p=db.plans.find(p=>norm(p.name).trim()===t);
+      if(!p){const words=t.split(/[^a-z0-9]+/).filter(Boolean);p=db.plans.find(p=>{const n=norm(p.name).trim();return n.length>=3&&(words.includes(n)||(n.includes(' ')&&t.includes(n)))})}
+      if(p)return p}
+    const has=x=>g.has(x),only=(...a)=>[...g].every(x=>a.includes(x)||x==='Core'||x==='Waden');
+    if(g.size&&only('Beine','Po'))return by('beine');
+    if(has('Rücken')&&!has('Brust')&&!has('Beine')&&only('Rücken','Bizeps','Unterarme'))return by('pull');
+    if(has('Brust')&&!has('Rücken')&&!has('Beine')&&only('Brust','Schultern','Trizeps'))return by('push');
+    return by('gym');
+  }
+  const fmtD=d=>d.split('-').reverse().join('.');
+  function preview(r){
+    if(!r.all.length){el('rcPrev').textContent='In der Datei wurden keine Krafttrainings gefunden.';el('rcActs').hidden=true;return}
+    const dates=r.all.map(s=>s.date).sort();
+    let t=`${r.all.length} Trainings (${fmtD(dates[0])} – ${fmtD(dates[dates.length-1])}) · ${r.setCount.toLocaleString('de-DE')} Sätze · ${r.exCount} Übungen, davon ${r.custom.length} neu.`;
+    const dup=r.all.length-r.fresh.length;if(dup)t+=` ${dup} Trainings sind schon vorhanden und werden übersprungen.`;
+    if(r.skipped)t+=` ${r.skipped} Zeilen ohne Datum oder Wiederholungen werden ausgelassen.`;
+    if(r.dropped.length)t+=` Nicht übernommen: ${r.dropped.join(', ')}.`;
+    if(!r.fresh.length)t+=' Es gibt nichts Neues zu übernehmen.';
+    el('rcPrev').textContent=t;el('rcActs').hidden=!r.fresh.length;
+  }
+  el('rcPick').addEventListener('click',()=>el('rcFile').click());
+  el('rcFile').addEventListener('change',async e=>{
+    const file=e.target.files[0];e.target.value='';if(!file)return;pending=null;el('rcActs').hidden=true;el('rcPrev').textContent='Lese Datei …';
+    try{if(file.size>20e6)throw new Error('size');pending=read(await file.text());preview(pending)}
+    catch(err){el('rcPrev').textContent=err.message==='format'?'Das sieht nicht nach einem RepCount-Export aus. Bitte die CSV-Datei aus RepCount auswählen.':err.message==='size'?'Die Datei ist zu groß.':'Die Datei konnte nicht gelesen werden.'}
+  });
+  el('rcNo').addEventListener('click',()=>{pending=null;el('rcActs').hidden=true;el('rcPrev').textContent=''});
+  el('rcGo').addEventListener('click',()=>{
+    if(!pending)return;const r=pending;pending=null;const have=new Set(db.sessions.map(s=>s.id));
+    db.sessions.push(...r.fresh.filter(s=>!have.has(s.id)));
+    const known=new Set(db.custom.map(c=>c.n));r.custom.forEach(c=>{if(!known.has(c.n)&&!libInfo(c.n))db.custom.push(c)});
+    persist();renderAll();el('rcActs').hidden=true;el('rcPrev').textContent=`${r.fresh.length} Trainings übernommen.`;toast(`${r.fresh.length} Trainings übernommen`);
   });
 })();
 </script>
