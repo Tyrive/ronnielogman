@@ -317,6 +317,13 @@ html.lock,html.lock body{overflow:hidden}
 .card.swapping{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .swapnote{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:6px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));font-size:13px}
 .swapnote b{color:var(--accent)}
+.saveask{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.saveask p{margin:0;font-weight:600;line-height:1.4}
+.saveask ul{margin:0;padding-left:18px;color:var(--ink)}
+.saveask .acts{display:flex;gap:8px;flex-wrap:wrap}
+.saveask .acts .btn{flex:1 1 140px}
+.saveask .acts .go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.card.needs{border-color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn)}
 .pickbody{display:flex;flex-direction:column;gap:10px}
 .pickclose{align-self:center}
 @media (prefers-reduced-motion:reduce){.pickhead .plus,.pickhead .chev{transition:none}}
@@ -420,6 +427,7 @@ html.lock,html.lock body{overflow:hidden}
     </div>
 
     <label id="noteWrap">Notiz<textarea id="fNote" placeholder="Wie lief's?"></textarea></label>
+    <div class="saveask" id="saveAsk" hidden role="alertdialog" aria-live="assertive"></div>
     <button class="primary" id="save">Training speichern</button>
   </section>
 
@@ -925,7 +933,7 @@ $('tpls').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if
   if(same&&!editingId){draft={title:'',planId:null,exercises:[]};renderTpls();renderExList();return}
   if(p){draft.planId=p.id;draft.title=p.name;if(!editingId)draft.exercises=p.exercises.map(newEx)}else{draft.planId=null;draft.title='Frei'}renderTpls();renderExList()});
 $('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f)draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
-$('exList').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+$('exList').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(!$('saveAsk').hidden&&!t.dataset.step)hideAsk();
   if(t.dataset.step){const[i,j,f,d]=t.dataset.step.split('_'),set=draft.exercises[+i].sets[+j],v=Math.max(0,Math.round((num(set[f])+(+d))*100)/100);
     set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');return}
   if(t.dataset.askdel!==undefined){confirmDel=+t.dataset.askdel}
@@ -936,7 +944,7 @@ $('exList').addEventListener('click',e=>{const t=e.target.closest('button');if(!
   else if(t.dataset.delset){const[i,j]=t.dataset.delset.split('_').map(Number);draft.exercises[i].sets.splice(j,1)}
   else return;renderExList()});
 
-function resetForm(){draft={title:'',planId:null,exercises:[]};swapIdx=null;confirmDel=null;['lDist','lMin','lSec','lHr','sMin','sName','fNote'].forEach(id=>$(id).value='');runSel='z2';updPace()}
+function resetForm(){draft={title:'',planId:null,exercises:[]};swapIdx=null;confirmDel=null;if($('saveAsk'))hideAsk();['lDist','lMin','lSec','lHr','sMin','sName','fNote'].forEach(id=>$(id).value='');runSel='z2';updPace()}
 function startEdit(id){const s=db.sessions.find(x=>x.id===id);if(!s)return;resetForm();editingId=id;type=s.type;
   if(s.type==='kraft'){const p=planOf(s);draft={planId:p?p.id:null,title:p?p.name:'Frei',exercises:s.exercises.map(e=>({name:e.name,note:e.note||'',sets:e.sets.map(x=>({w:x.w||'',r:x.r}))}))}}
   else if(s.type==='lauf'){$('lDist').value=String(s.dist).replace('.',',');$('lMin').value=Math.floor(s.sec/60);$('lSec').value=pad(s.sec%60);$('lHr').value=s.hr||'';runSel=runKind(s);updPace()}
@@ -945,7 +953,34 @@ function startEdit(id){const s=db.sessions.find(x=>x.id===id);if(!s)return;reset
 function cancelEdit(){editingId=null;resetForm();renderDay();renderForm()}
 $('cancelEdit').addEventListener('click',cancelEdit);
 
-$('save').addEventListener('click',()=>{
+/* Rückfragen vor dem Speichern */
+let saveOpt={};
+function hideAsk(){$('saveAsk').hidden=true;$('saveAsk').innerHTML='';$('save').hidden=false;document.querySelectorAll('#exList .card.needs').forEach(c=>c.classList.remove('needs'))}
+function ask(html,buttons){$('saveAsk').innerHTML=html+'<div class="acts">'+buttons.map(([k,l,go])=>`<button class="btn${go?' go':''}" data-ans="${k}">${l}</button>`).join('')+'</div>';
+  $('saveAsk').hidden=false;$('save').hidden=true;$('saveAsk').scrollIntoView({block:'center',behavior:SMOOTH()});const f=$('saveAsk').querySelector('.go');if(f)f.focus({preventScroll:true})}
+const sameList=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
+$('saveAsk').addEventListener('click',e=>{const b=e.target.closest('[data-ans]');if(!b)return;const a=b.dataset.ans;
+  if(a==='empty-back'){hideAsk();saveOpt={};const i=draft.exercises.findIndex(x=>!x.sets.some(z=>num(z.r)>0));const c=$('exc'+i);
+    if(c){c.classList.add('needs');c.scrollIntoView({block:'center',behavior:SMOOTH()});const inp=c.querySelector('input[data-f="r"]');if(inp)inp.focus({preventScroll:true})}return}
+  if(a==='empty-ok'){saveOpt.empty=true;hideAsk();doSave();return}
+  if(a==='plan-once'){saveOpt.plan='once';hideAsk();doSave();return}
+  if(a==='plan-save'){saveOpt.plan='save';hideAsk();doSave();return}
+  if(a==='back'){hideAsk();saveOpt={}}
+});
+$('save').addEventListener('click',()=>{saveOpt={};doSave()});
+function doSave(){
+  if(type==='kraft'){
+    const empties=draft.exercises.filter(e=>!e.sets.some(x=>num(x.r)>0));
+    if(empties.length&&empties.length<draft.exercises.length&&!saveOpt.empty){
+      ask(`<p>${empties.length===1?'Für diese Übung sind':'Für diese Übungen sind'} keine Werte eingetragen. ${empties.length===1?'Sie wird':'Sie werden'} nicht mitgespeichert:</p><ul>${empties.map(e=>`<li>${esc(e.name)}</li>`).join('')}</ul>`,
+        [['empty-back','Abbrechen'],['empty-ok','Akzeptieren und speichern',1]]);return}
+    const p=db.plans.find(x=>x.id===draft.planId),names=draft.exercises.map(e=>e.name);
+    if(p&&!saveOpt.plan&&names.length&&!sameList(names,p.exercises)){
+      const added=names.filter(n=>!p.exercises.includes(n)),removed=p.exercises.filter(n=>!names.includes(n));
+      const lines=[...added.map(n=>`<li>+ ${esc(n)}</li>`),...removed.map(n=>`<li>− ${esc(n)}</li>`)];
+      ask(`<p>Du hast die Übungen im Plan <span style="color:${p.color}">${esc(p.name)}</span> geändert${lines.length?':':' (Reihenfolge).'}</p>${lines.length?`<ul>${lines.join('')}</ul>`:''}<p class="muted" style="font-weight:400">Soll das nur für dieses Training gelten oder auch für künftige Trainings mit diesem Plan?</p>`,
+        [['plan-once','Nur dieses Training'],['plan-save','Auch künftig übernehmen',1]]);return}
+  }
   const old=editingId?db.sessions.find(x=>x.id===editingId):null;
   const base={id:old?old.id:uid(),date:old?old.date:selDate,note:$('fNote').value.trim()};let s;
   if(type==='kraft'){const ex=draft.exercises.map(e=>{const o={name:e.name,sets:e.sets.filter(x=>num(x.r)>0).map(x=>({w:num(x.w),r:num(x.r)}))};const n=(e.note||'').trim();if(n)o.note=n;return o}).filter(e=>e.sets.length);
@@ -957,10 +992,13 @@ $('save').addEventListener('click',()=>{
   else{const min=num($('sMin').value);if(!min){toast('Dauer fehlt');return}
     const name=sportSel==='Andere'?($('sName').value.trim()||'Sport'):sportSel;
     s={...base,type,title:name,sport:sportSel==='Andere'?name:sportSel,min}}
+  let planMsg='';
+  if(type==='kraft'&&saveOpt.plan==='save'){const p=db.plans.find(x=>x.id===draft.planId);if(p){p.exercises=draft.exercises.map(e=>e.name);planMsg=' · Plan '+p.name+' aktualisiert'}}
   if(old)db.sessions[db.sessions.indexOf(old)]=s;else db.sessions.push(s);
-  const wasEdit=!!old;editingId=null;resetForm();persist();renderAll();toast(wasEdit?'Änderungen gespeichert':'Gespeichert');
+  saveOpt={};
+  const wasEdit=!!old;editingId=null;resetForm();persist();renderAll();toast((wasEdit?'Änderungen gespeichert':'Gespeichert')+planMsg);
   $('dayList').scrollIntoView({behavior:'auto',block:'start'});
-});
+}
 
 /* Fortschritt */
 function drawLine(cv,pts,o){
