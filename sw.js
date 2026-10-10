@@ -1,6 +1,6 @@
 // RonnieLogman Service Worker
 // Bei jedem Update der App diese Versionsnummer erhöhen (z. B. v2, v3 ...).
-const CACHE = 'ronnielogman-v18';
+const CACHE = 'ronnielogman-v19';
 const APP_SHELL = [
   './',
   './index.html',
@@ -68,6 +68,17 @@ self.addEventListener('fetch', event => {
         .then(res => { if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
         .catch(() => cached);
       return cached || network;
+    })
+  );
+});
+
+// Tippen auf die Pausen-Mitteilung öffnet die App (oder holt sie in den Vordergrund)
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) { if ('focus' in c) return c.focus(); }
+      return self.clients.openWindow ? self.clients.openWindow('./') : undefined;
     })
   );
 });
