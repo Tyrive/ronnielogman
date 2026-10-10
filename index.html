@@ -188,7 +188,52 @@ body,.card,.tabs,.day,.entry{transition:background-color .35s,border-color .35s,
 .libItem.in i{color:var(--ok)}
 .libItem.custom b{color:var(--accent)}
 
-canvas{width:100%;height:190px;display:block}
+canvas{width:100%;height:210px;display:block}
+/* Tag mit seinen Trainings als eine Einheit */
+.daybox{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:10px;display:flex;flex-direction:column;gap:10px}
+.daybox .datenav{padding-bottom:10px;border-bottom:1px solid var(--line)}
+.daybox #dayList:empty{display:none}
+.daybox .card.muted{background:none;border:0;padding:2px 4px;text-align:center}
+.daybox .entry{background:var(--surface2)}
+/* Übungssuche im Fortschritt */
+.exsearch{position:relative}
+.exhits{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;margin-top:6px;overflow:hidden}
+.exhits:empty{display:none}
+.exhits button{display:flex;justify-content:space-between;gap:10px;border:0;border-bottom:1px solid var(--line);background:var(--surface2);color:var(--ink);text-align:left;padding:9px 12px;font:500 14px var(--body);cursor:pointer}
+.exhits button:last-child{border-bottom:0}
+.exhits small{color:var(--muted);font:12px var(--mono);white-space:nowrap}
+.exhits .none{padding:9px 12px;color:var(--muted);font-size:13px}
+.exsel{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.exsel b{font:600 20px var(--display);text-transform:uppercase;letter-spacing:.03em;overflow-wrap:anywhere}
+.exsel small{color:var(--muted);font:12px var(--mono);white-space:nowrap}
+/* Handy: alles etwas kompakter */
+@media (max-width:440px){
+  body{font-size:14px}
+  .app{gap:12px}
+  h2{font-size:18px}
+  .tabs{padding:3px;gap:2px}
+  .tabs button{font-size:11.5px;padding:8px 1px;letter-spacing:-.01em}
+  .chip{font-size:12.5px;padding:5px 10px;gap:6px}
+  .chips{gap:5px}
+  .card{padding:11px;gap:9px}
+  .stat span{font-size:10px}
+  .stat b{font-size:15px}
+  .seg button{font-size:13px;padding:8px 4px}
+  .datenav .mid b{font-size:21px}
+  .day{min-height:50px}
+  label{font-size:11px}
+  input,select,textarea{font-size:16px}
+  canvas{height:200px}
+  .tabs{display:flex}
+  .tabs button{flex:1 1 auto;text-overflow:clip}
+  .stat b{font-size:14px}
+  .timer .in{gap:6px}
+  .timer .clock{font-size:22px;min-width:62px}
+  .timer .btn.small{padding:6px 8px;font-size:12.5px}
+  .timer .lbl{display:none}
+}
+.timer .btn{white-space:nowrap}
+.timer .clock{margin-right:auto}
 .timer{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:10}
 .timer .in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:8px}
 .timer .clock{font-family:var(--mono);font-size:26px;min-width:76px;font-variant-numeric:tabular-nums}
@@ -317,19 +362,19 @@ html.lock,html.lock body{overflow:hidden}
   <!-- TRAINING -->
   <section class="panel" id="tab-train">
     <div class="modebar"><button class="modechip" id="modeSwitch" aria-label="Trainingsart wechseln"><i>⇄</i><span id="modeName">Gym</span><small>wechseln</small></button><b id="streak"></b></div>
-    <div class="card">
+    <div class="daybox">
       <div class="datenav">
         <button class="btn" id="dPrev" aria-label="Vorheriger Tag">‹</button>
         <div class="mid"><b id="dTitle"></b><span id="dSub"></span></div>
         <button class="btn" id="dNext" aria-label="Nächster Tag">›</button>
       </div>
+      <div class="panel" id="dayList"></div>
     </div>
-    <div class="panel" id="dayList"></div>
 
     <div class="editbar" id="editBar" hidden><span>Training bearbeiten</span><button class="btn small" id="cancelEdit">Abbrechen</button></div>
 
     <div id="kraftForm" class="panel">
-      <div class="card"><h3>Plan</h3><div class="chips" id="tpls"></div></div>
+      <div class="card"><h3>Plan</h3><div class="chips" id="tpls"></div><div class="muted" id="planHint"></div></div>
       <div id="exList" class="panel"></div>
       <div class="card picker" id="picker">
         <button class="pickhead" id="pickToggle" aria-expanded="false" aria-controls="pickBody"><span class="plus">+</span><span class="t">Übung hinzufügen</span><span class="last" id="libCount"></span><span class="chev">▾</span></button>
@@ -364,7 +409,7 @@ html.lock,html.lock body{overflow:hidden}
       </div>
     </div>
 
-    <label>Notiz<textarea id="fNote" placeholder="Wie lief's?"></textarea></label>
+    <label id="noteWrap">Notiz<textarea id="fNote" placeholder="Wie lief's?"></textarea></label>
     <button class="primary" id="save">Training speichern</button>
   </section>
 
@@ -422,10 +467,14 @@ html.lock,html.lock body{overflow:hidden}
   <section class="panel" id="tab-prog" hidden>
     <div class="card">
       <h2>Kraft</h2>
-      <label>Übung<select id="pEx"></select></label>
+      <div class="exsearch">
+        <input id="pExQ" type="search" placeholder="Übung suchen, z. B. Bankdrücken" aria-label="Übung suchen" autocomplete="off">
+        <div class="exhits" id="pExHits"></div>
+      </div>
+      <div class="exsel" id="pExSel"></div>
       <div class="stats" id="pStats"></div>
       <h3>Diagramm zeigt</h3>
-      <div class="chips scroll" id="pMetric"></div>
+      <div class="chips" id="pMetric"></div>
       <canvas id="cEx" aria-label="Verlauf der Übung"></canvas>
       <div class="muted" id="pNote"></div>
     </div>
@@ -433,9 +482,9 @@ html.lock,html.lock body{overflow:hidden}
       <h2>Laufen</h2>
       <div class="stats" id="rStats"></div>
       <h3>Diagramm zeigt</h3>
-      <div class="chips scroll" id="rMetric"></div>
+      <div class="chips" id="rMetric"></div>
       <h3>Laufart</h3>
-      <div class="chips scroll" id="rKind"></div>
+      <div class="chips" id="rKind"></div>
       <canvas id="cRun" aria-label="Verlauf beim Laufen"></canvas>
       <div class="muted" id="rNote"></div>
     </div>
@@ -818,7 +867,10 @@ $('libList').addEventListener('click',e=>{const b=e.target.closest('[data-add]')
 function renderExList(){
   const ready=!!(draft.title||draft.planId||draft.exercises.length||editingId);$('picker').hidden=!ready;if(!ready&&pickOpen)setPicker(false);
   renderLib();
-  if(!draft.exercises.length){$('exList').innerHTML='<div class="card muted">'+(draft.title?'Noch keine Übungen. Füge unten eine hinzu.':'Wähle oben einen Plan, um loszulegen. Werte vom letzten Mal werden automatisch vorausgefüllt.')+'</div>';return}
+  $('planHint').textContent=ready?(editingId?'':'Nochmal tippen, um den Plan wieder zu schließen.'):'Wähle einen Plan, um loszulegen. Werte vom letzten Mal werden automatisch vorausgefüllt.';
+  $('planHint').hidden=!$('planHint').textContent;
+  $('noteWrap').hidden=type==='kraft'&&!ready;$('save').hidden=type==='kraft'&&!ready;
+  if(!draft.exercises.length){$('exList').innerHTML=ready?'<div class="card muted">Noch keine Übungen. Füge unten eine hinzu.</div>':'';return}
   $('exList').innerHTML=draft.exercises.map((e,i)=>{const l=lastFor(e.name),inf=libInfo(e.name);return`<div class="card">
     <div class="ex-head"><div><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div><button class="icon" data-delex="${i}" aria-label="Übung entfernen">✕</button></div>
     ${inf&&inf.tip?`<div class="cx-tip">Tipp: ${esc(inf.tip)}</div>`:''}
@@ -848,6 +900,8 @@ function updPace(){const km=num($('lDist').value),sec=num($('lMin').value)*60+nu
 $('runSeg').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(!b)return;runSel=b.dataset.k;renderForm()});
 $('sportSeg').addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(!b)return;sportSel=b.dataset.sp;renderForm()});
 $('tpls').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if(!b)return;const p=db.plans.find(x=>x.id===b.dataset.tpl);
+  const same=p?draft.planId===p.id:(!draft.planId&&draft.title==='Frei');
+  if(same&&!editingId){draft={title:'',planId:null,exercises:[]};renderTpls();renderExList();return}
   if(p){draft.planId=p.id;draft.title=p.name;if(!editingId)draft.exercises=p.exercises.map(newEx)}else{draft.planId=null;draft.title='Frei'}renderTpls();renderExList()});
 $('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f)draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
 $('exList').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
@@ -889,13 +943,15 @@ function drawLine(cv,pts,o){
   const dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W)return;
   cv.width=W*dpr;cv.height=H*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,W,H);
   const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
-  c.font='12px "IBM Plex Mono",monospace';c.fillStyle=col('--muted');
+  const fs=W<380?12:13;c.font=fs+'px "IBM Plex Mono",monospace';c.fillStyle=col('--muted');
   if(pts.length<2){c.fillText(pts.length?'Ab zwei Einträgen gibt es ein Diagramm':'Noch keine Daten',8,H/2);return}
-  const L=52,R=14,T=12,B=24;let ys=pts.map(p=>p.y),mn=Math.min(...ys),mx=Math.max(...ys);if(mn===mx){mn-=1;mx+=1}const pd=(mx-mn)*.12;mn-=pd;mx+=pd;
+  let ys=pts.map(p=>p.y),mn=Math.min(...ys),mx=Math.max(...ys);if(mn===mx){mn-=1;mx+=1}const pd=(mx-mn)*.12;mn-=pd;mx+=pd;
+  const ticks=[0,1,2,3].map(i=>mn+(mx-mn)*(i+.5)/4);
+  const L=Math.ceil(Math.max(...ticks.map(v=>c.measureText(o.f(v)).width)))+12,R=14,T=12,B=26;
   const x0=pts[0].x,x1=pts[pts.length-1].x;
   const X=x=>L+(x1===x0?.5:(x-x0)/(x1-x0))*(W-L-R),Y=y=>o.invert?T+(y-mn)/(mx-mn)*(H-T-B):H-B-(y-mn)/(mx-mn)*(H-T-B);
   c.strokeStyle=col('--line');c.lineWidth=1;c.textAlign='right';c.textBaseline='middle';
-  for(let i=0;i<4;i++){const v=mn+(mx-mn)*(i+.5)/4,y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(W-R,y);c.stroke();c.fillText(o.f(v),L-6,y)}
+  ticks.forEach(v=>{const y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(W-R,y);c.stroke();c.fillText(o.f(v),L-8,y)});
   c.textBaseline='alphabetic';c.textAlign='left';const dl=t=>{const d=new Date(t);return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'};
   c.fillText(dl(x0),L,H-6);c.textAlign='right';c.fillText(dl(x1),W-R,H-6);
   const color=col(o.color);
@@ -904,10 +960,23 @@ function drawLine(cv,pts,o){
   c.beginPath();pts.forEach((p,i)=>i?c.lineTo(X(p.x),Y(p.y)):c.moveTo(X(p.x),Y(p.y)));c.strokeStyle=color;c.lineWidth=2.2;c.lineJoin='round';c.stroke();
   pts.forEach((p,i)=>{c.beginPath();c.arc(X(p.x),Y(p.y),i===pts.length-1?5:2.8,0,7);c.fillStyle=i===pts.length-1?color:col('--surface');c.fill();c.strokeStyle=color;c.lineWidth=2;c.stroke()});
 }
+let progEx=null;
+function exStats(){const m=new Map();db.sessions.forEach(s=>{if(s.type!=='kraft')return;(s.exercises||[]).forEach(e=>{const o=m.get(e.name)||{n:0,last:''};o.n++;if(s.date>o.last)o.last=s.date;m.set(e.name,o)})});return m}
+function renderExHits(){
+  const st=exStats(),raw=$('pExQ').value.trim(),q=norm(raw);
+  if(!q){$('pExHits').innerHTML='';return}
+  const hits=[...st.keys()].filter(n=>norm(n).includes(q)).sort((a,b)=>norm(a).indexOf(q)-norm(b).indexOf(q)||st.get(b).n-st.get(a).n).slice(0,8);
+  $('pExHits').innerHTML=hits.length?hits.map(n=>`<button data-pex="${esc(n)}"><span>${esc(n)}</span><small>${st.get(n).n}×</small></button>`).join(''):'<div class="none">Keine trainierte Übung gefunden.</div>';
+}
+$('pExQ').addEventListener('input',renderExHits);
+$('pExQ').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('pExHits').querySelector('[data-pex]');if(b){e.preventDefault();b.click()}}});
+$('pExHits').addEventListener('click',e=>{const b=e.target.closest('[data-pex]');if(!b)return;progEx=b.dataset.pex;$('pExQ').value='';$('pExHits').innerHTML='';$('pExQ').blur();renderProg()});
 function renderProg(){
-  const names=allNames().sort((a,b)=>a.localeCompare(b,'de'));
-  const cur=$('pEx').value;$('pEx').innerHTML=names.map(n=>`<option${n===cur?' selected':''}>${esc(n)}</option>`).join('');
-  const name=$('pEx').value,ss=db.sessions.filter(s=>s.type==='kraft').sort((a,b)=>a.date.localeCompare(b.date));
+  const st=exStats();
+  if(!progEx||!st.has(progEx)){let best=null;st.forEach((o,n)=>{if(!best||o.last>st.get(best).last)best=n});progEx=best}
+  $('pExSel').innerHTML=progEx?`<b>${esc(progEx)}</b><small>${st.get(progEx).n}× trainiert</small>`:'<span class="muted">Noch keine Krafttrainings eingetragen.</span>';
+  renderExHits();
+  const name=progEx,ss=db.sessions.filter(s=>s.type==='kraft').sort((a,b)=>a.date.localeCompare(b.date));
   const rows=[];ss.forEach(s=>{const e=s.exercises.find(e=>e.name===name);if(e)rows.push({x:parseD(s.date).getTime(),sets:e.sets})});
   const weighted=rows.some(r=>r.sets.some(x=>x.w>0)),all=rows.flatMap(r=>r.sets);
   if(weighted){const top=all.reduce((a,b)=>b.w>a.w||(b.w===a.w&&b.r>a.r)?b:a,{w:0,r:0}),e1=Math.max(...all.map(x=>x.w*(1+x.r/30)));
@@ -947,7 +1016,7 @@ const RUN_METRICS=[
   {k:'hr',l:'Ø Puls',f:r=>r.hr||null,fmt:v=>fmt(v,0),d:'Durchschnittlicher Puls pro Lauf, nur Läufe mit Pulsangabe.'}
 ];
 let pMetric=null,rMetric='pace',rKindSel='alle';
-$('pEx').addEventListener('change',renderProg);
+
 $('pMetric').addEventListener('click',e=>{const b=e.target.closest('[data-pm]');if(!b)return;pMetric=b.dataset.pm;renderProg()});
 $('rMetric').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b)return;rMetric=b.dataset.rm;renderProg()});
 $('rKind').addEventListener('click',e=>{const b=e.target.closest('[data-rk]');if(!b)return;rKindSel=b.dataset.rk;renderProg()});
