@@ -551,18 +551,23 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       </div>
     </div>
     <div class="card">
-      <h2>Aus FitNotes übernehmen</h2>
+      <h2>Daten importieren</h2>
+      <div class="seg" id="impSeg" role="tablist" aria-label="Import aus">
+        <button data-imp="fn" class="on" role="tab" aria-selected="true">FitNotes</button>
+        <button data-imp="rc" role="tab" aria-selected="false">RepCount</button>
+      </div>
+      <div class="panel" id="impFn">
       <p class="muted" style="margin:0">In FitNotes unter <b>Einstellungen → Backup</b> eine Sicherung erstellen und die <b>.fitnotes</b>-Datei hier auswählen. Die Datei wird nur auf diesem Gerät gelesen.</p>
       <div><button class="btn" id="fnPick">FitNotes-Datei auswählen</button><input type="file" id="fnFile" hidden></div>
       <div class="muted" id="fnPrev" aria-live="polite"></div>
       <div id="fnActs" hidden style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fnGo" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Übernehmen</button><button class="btn" id="fnNo">Abbrechen</button></div>
-    </div>
-    <div class="card">
-      <h2>Aus RepCount übernehmen</h2>
+      </div>
+      <div class="panel" id="impRc" hidden>
       <p class="muted" style="margin:0">In RepCount die Trainings als <b>CSV</b> exportieren und die Datei hier auswählen. Übernommen werden Datum, Übungen, Gewicht, Wiederholungen und Notizen. Die Datei wird nur auf diesem Gerät gelesen.</p>
       <div><button class="btn" id="rcPick">RepCount-Datei auswählen</button><input type="file" id="rcFile" accept=".csv,text/csv,text/plain,*/*" hidden></div>
       <div class="muted" id="rcPrev" aria-live="polite"></div>
       <div id="rcActs" hidden style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="rcGo" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Übernehmen</button><button class="btn" id="rcNo">Abbrechen</button></div>
+      </div>
     </div>
     <div class="card">
       <h2>Backup</h2>
@@ -1352,6 +1357,11 @@ $('chooser').addEventListener('click',e=>{const b=e.target.closest('[data-pick]'
   if(p==='cal'){switchTab('cal');return}
   if(editingId)cancelEdit();type=p;selDate=todayIso();setPicker(false);switchTab('train')});
 $('modeSwitch').addEventListener('click',openChooser);
+
+/* Import: Quelle wählen */
+document.getElementById('impSeg').addEventListener('click',e=>{const b=e.target.closest('[data-imp]');if(!b)return;const k=b.dataset.imp;
+  document.querySelectorAll('#impSeg [data-imp]').forEach(x=>{const on=x.dataset.imp===k;x.classList.toggle('on',on);x.setAttribute('aria-selected',String(on))});
+  document.getElementById('impFn').hidden=k!=='fn';document.getElementById('impRc').hidden=k!=='rc'});
 
 /* Reiter */
 function setMode(){if(tab==='train')document.documentElement.dataset.mode='gym';else delete document.documentElement.dataset.mode}
