@@ -18,7 +18,10 @@
 body{margin:0;font:14px system-ui,sans-serif}
 img{max-width:100%}
 [hidden]{display:none!important}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+/* iPhone: kein Zoomen bei schnellem Doppeltipp auf Knöpfe, Tage und Pfeile (Zwei-Finger-Zoom bleibt möglich) */
+body,button,a,input,select,textarea,label,[role="button"],.day,.cd,.chip,.entry,.card{touch-action:manipulation}
+button,.day,.cd,.chip,[role="button"]{-webkit-user-select:none;user-select:none}
 button{-webkit-tap-highlight-color:transparent}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
