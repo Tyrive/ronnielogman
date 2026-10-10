@@ -345,6 +345,12 @@ html.lock,html.lock body{overflow:hidden}
 .exacts .mv{width:28px;font-size:17px;color:var(--muted)}
 .exacts .mv:disabled{opacity:.25;cursor:default;background:none}
 .card.moved{animation:moved .7s ease-out}
+.sets .n.pr{color:#F5B83D;display:grid;place-items:center;filter:drop-shadow(0 0 6px rgba(245,184,61,.45))}
+.sets .n.pop svg{animation:prpop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes prpop{0%{transform:scale(.3) rotate(-20deg)}100%{transform:scale(1) rotate(0)}}
+.pr-mini{display:inline-block;vertical-align:-3px;margin-left:2px;color:#F5B83D}
+.pr-mini svg{width:14px;height:14px}
+@media (prefers-reduced-motion:reduce){.sets .n.pop svg{animation:none}}
 @keyframes moved{0%{box-shadow:inset 0 0 0 2px var(--accent)}100%{box-shadow:inset 0 0 0 0 transparent}}
 @media (prefers-reduced-motion:reduce){.card.moved{animation:none}}
 .exacts .swap{color:var(--accent)}
@@ -922,7 +928,11 @@ function openDay(ds){if(editingId)cancelEdit();selDate=ds;switchTab('train')}
 
 /* Training: Tag */
 function relLabel(ds){const t=todayIso();return ds===t?'Heute':ds===addDays(t,-1)?'Gestern':ds===addDays(t,1)?'Morgen':''}
-function setsSummary(sets){return sets.map(s=>(s.w?fmt(s.w)+'×':'')+s.r).join(' · ')}
+/* Rekorde: Satz mit dem höchsten Gewicht einer Einheit, wenn es das bisherige Maximum der Übung übertrifft */
+const TROPHY='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h3a1 1 0 0 1 1 1v2a5 5 0 0 1-4.6 5A5.5 5.5 0 0 1 13 15.9V18h3a1 1 0 0 1 1 1v2H7v-2a1 1 0 0 1 1-1h3v-2.1A5.5 5.5 0 0 1 7.6 13 5 5 0 0 1 3 8V6a1 1 0 0 1 1-1h3V3zm10 4v3.8A3 3 0 0 0 19 8V7h-2zM5 7v1a3 3 0 0 0 2 2.8V7H5z"/></svg>';
+function prevMax(name,date,excludeId){let m=0;for(const s of db.sessions){if(s.type!=='kraft'||s.id===excludeId||!(s.date<date))continue;for(const e of s.exercises||[])if(e.name===name)for(const x of e.sets||[]){const w=num(x.w);if(w>m)m=w}}return m}
+function prIndex(name,sets,date,excludeId){let bi=-1,bw=0;sets.forEach((x,j)=>{const w=num(x.w);if(w>bw&&num(x.r)>0){bw=w;bi=j}});if(bi<0)return -1;const pm=prevMax(name,date,excludeId);return pm>0&&bw>pm?bi:-1}
+function setsSummary(sets,pr){return sets.map((s,j)=>(s.w?fmt(s.w)+'×':'')+s.r+(j===pr?`<span class="pr-mini" title="Neues Maximalgewicht">${TROPHY}</span>`:'')).join(' · ')}
 function summary(s){
   if(s.type==='kraft'){const sets=s.exercises.reduce((a,e)=>a+e.sets.length,0),vol=s.exercises.reduce((a,e)=>a+e.sets.reduce((b,x)=>b+x.w*x.r,0),0);return`${s.exercises.length} Übungen · ${sets} Sätze${vol?' · '+fmt(vol,0)+' kg Volumen':''}`}
   if(s.type==='lauf')return`${fmt(s.dist,2)} km · ${mmss(s.sec)} · ${mmss(s.sec/s.dist)} /km${s.hr?' · Ø '+s.hr+' bpm':''}`;
@@ -934,7 +944,7 @@ function renderDay(){
   const ss=sessionsOn(selDate);
   $('dayList').innerHTML=ss.length?ss.map(s=>`<div class="entry${s.id===editingId?' editing':''}" data-open="${s.id}" role="button" tabindex="0" aria-label="${esc(s.title)} bearbeiten" style="--c:${cssc(markerVar(s))}"><div class="bar"></div><div style="min-width:0">
       <div class="title">${mk(s,1)}${esc(s.title)}${s.example?' <span class="muted">· Beispiel</span>':''}${s.id===editingId?'<span class="hint">wird bearbeitet</span>':''}<button class="delbtn" data-del="${s.id}" aria-label="${esc(s.title)} löschen">−</button></div><div class="sum">${summary(s)}</div>
-      ${s.type==='kraft'?`<div class="ex">${s.exercises.map(e=>esc(e.name)+': '+setsSummary(e.sets)+(e.note?` <span class="exnote-v">– ${esc(e.note)}</span>`:'')).join('<br>')}</div>`:''}
+      ${s.type==='kraft'?`<div class="ex">${s.exercises.map(e=>esc(e.name)+': '+setsSummary(e.sets,prIndex(e.name,e.sets,s.date,s.id))+(e.note?` <span class="exnote-v">– ${esc(e.note)}</span>`:'')).join('<br>')}</div>`:''}
       ${s.note?`<div class="ex">${esc(s.note)}</div>`:''}
       <div class="confirm">Training wirklich löschen?<button class="btn small yes" data-yes="${s.id}">Löschen</button><button class="btn small" data-no="1">Abbrechen</button></div></div></div>`).join('')
     :`<div class="card muted">An diesem Tag ist noch nichts eingetragen.</div>`;
@@ -988,6 +998,11 @@ $('libList').addEventListener('click',e=>{const b=e.target.closest('[data-add]')
   if(draft.exercises.some(x=>x.name===n)){toast('Ist schon im Training');return}
   draft.exercises.push(newEx(n));if(!draft.title)draft.title='Frei';$('libQ').value='';setPicker(false);renderTpls();renderExList();const nc=$('exList').lastElementChild;if(nc)nc.scrollIntoView({block:'center',behavior:SMOOTH()});toast(n+' hinzugefügt')});
 
+const draftDate=()=>{const o=editingId&&db.sessions.find(x=>x.id===editingId);return o?o.date:selDate};
+function updPR(i){const e=draft.exercises[i];if(!e)return;const pr=prIndex(e.name,e.sets,draftDate(),editingId);
+  e.sets.forEach((x,j)=>{const c=$('n'+i+'_'+j);if(!c)return;const on=j===pr;if(on===c.classList.contains('pr'))return;
+    c.classList.toggle('pr',on);c.innerHTML=on?TROPHY:String(j+1);c.title=on?'Neues Maximalgewicht':'';c.setAttribute('aria-label',on?`Satz ${j+1}: neues Maximalgewicht`:`Satz ${j+1}`);
+    if(on){c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop')}})}
 function renderExList(){
   const ready=!!(draft.title||draft.planId||draft.exercises.length||editingId);$('picker').hidden=!ready;if(!ready&&pickOpen)setPicker(false);
   renderLib();
@@ -1001,12 +1016,13 @@ function renderExList(){
     ${inf&&inf.tip?`<div class="cx-tip">Tipp: ${esc(inf.tip)}</div>`:''}
     ${l?`<div class="last">Zuletzt ${shortDay(l.date)}: ${setsSummary(l.sets)}</div>`:''}
     <div class="sets"><span class="h">#</span><span class="h">kg</span><span class="h">Wdh.</span><span></span>
-    ${e.sets.map((s,j)=>`<span class="n">${j+1}</span>
+    ${e.sets.map((s,j)=>`<span class="n" id="n${i}_${j}">${j+1}</span>
       <div class="step"><button data-step="${i}_${j}_w_-1" aria-label="Gewicht minus 1">−</button><input inputmode="decimal" id="w${i}_${j}" data-e="${i}" data-s="${j}" data-f="w" value="${s.w}" placeholder="0" aria-label="Gewicht Satz ${j+1}"><button data-step="${i}_${j}_w_1" aria-label="Gewicht plus 1">+</button></div>
       <div class="step"><button data-step="${i}_${j}_r_-1" aria-label="Wiederholungen minus 1">−</button><input inputmode="numeric" id="r${i}_${j}" data-e="${i}" data-s="${j}" data-f="r" value="${s.r}" placeholder="0" aria-label="Wiederholungen Satz ${j+1}"><button data-step="${i}_${j}_r_1" aria-label="Wiederholungen plus 1">+</button></div>
       <button class="icon" data-delset="${i}_${j}" aria-label="Satz entfernen">✕</button>`).join('')}
     </div><button class="btn small" data-addset="${i}" style="align-self:flex-start">+ Satz</button>
     <input class="exnote" id="note${i}" data-note="${i}" value="${esc(e.note||'')}" placeholder="Notiz zur Übung, z. B. Griff, Gefühl, Technik" aria-label="Notiz zu ${esc(e.name)}"></div>`}).join('');
+  draft.exercises.forEach((_,i)=>updPR(i));
 }
 function renderForm(){
   $('editBar').hidden=!editingId;
@@ -1028,10 +1044,10 @@ $('tpls').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if
   const same=p?draft.planId===p.id:(!draft.planId&&draft.title==='Frei');
   if(same&&!editingId){draft={title:'',planId:null,exercises:[]};renderTpls();renderExList();return}
   if(p){draft.planId=p.id;draft.title=p.name;if(!editingId)draft.exercises=p.exercises.map(newEx)}else{draft.planId=null;draft.title='Frei'}renderTpls();renderExList()});
-$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f)draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
+$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f){draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;updPR(+t.dataset.e)}else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
 $('exList').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(!$('saveAsk').hidden&&!t.dataset.step)hideAsk();
   if(t.dataset.step){const[i,j,f,d]=t.dataset.step.split('_'),set=draft.exercises[+i].sets[+j],v=Math.max(0,Math.round((num(set[f])+(+d))*100)/100);
-    set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');return}
+    set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');updPR(+i);return}
   if(t.dataset.mv){const[i,d]=t.dataset.mv.split('_').map(Number),j=i+d,a=draft.exercises;if(j<0||j>=a.length)return;
     [a[i],a[j]]=[a[j],a[i]];const fix=x=>x===i?j:x===j?i:x;if(swapIdx!==null)swapIdx=fix(swapIdx);if(confirmDel!==null)confirmDel=fix(confirmDel);
     renderExList();const c=$('exc'+j);if(c){c.classList.add('moved');c.scrollIntoView({block:'nearest',behavior:SMOOTH()});setTimeout(()=>c.classList.remove('moved'),700);const b=c.querySelector(`[data-mv="${j}_${d}"]`);if(b&&!b.disabled)b.focus({preventScroll:true})}return}
@@ -1095,7 +1111,9 @@ function doSave(){
   if(type==='kraft'&&saveOpt.plan==='save'){const p=db.plans.find(x=>x.id===draft.planId);if(p){p.exercises=draft.exercises.map(e=>e.name);planMsg=' · Plan '+p.name+' aktualisiert'}}
   if(old)db.sessions[db.sessions.indexOf(old)]=s;else db.sessions.push(s);
   saveOpt={};
-  const wasEdit=!!old;editingId=null;resetForm();persist();renderAll();toast((wasEdit?'Änderungen gespeichert':'Gespeichert')+planMsg);
+  const prs=s.type==='kraft'?s.exercises.map(e=>{const k=prIndex(e.name,e.sets,s.date,s.id);return k>=0?e.name+' '+fmt(e.sets[k].w)+' kg':null}).filter(Boolean):[];
+  const wasEdit=!!old;editingId=null;resetForm();persist();renderAll();
+  if(prs.length)toast('🏆 Neuer Rekord: '+prs.slice(0,2).join(', ')+(prs.length>2?' +'+(prs.length-2):''));else toast((wasEdit?'Änderungen gespeichert':'Gespeichert')+planMsg);
   $('dayList').scrollIntoView({behavior:'auto',block:'start'});
 }
 
