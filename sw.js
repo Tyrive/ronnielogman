@@ -1,6 +1,6 @@
 // RonnieLogman Service Worker
 // Bei jedem Update der App diese Versionsnummer erhöhen (z. B. v2, v3 ...).
-const CACHE = 'ronnielogman-v12';
+const CACHE = 'ronnielogman-v13';
 const APP_SHELL = [
   './',
   './index.html',
@@ -53,7 +53,8 @@ self.addEventListener('fetch', event => {
   // Seitenaufrufe: erst Netz (damit Updates sofort ankommen), offline aus dem Cache
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
+      // 'no-cache': immer beim Server nachfragen, damit neue Versionen sofort ankommen (GitHub Pages cacht sonst bis zu 10 Min.)
+      fetch(req, { cache: 'no-cache' })
         .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return res; })
         .catch(() => caches.match('./index.html'))
     );
