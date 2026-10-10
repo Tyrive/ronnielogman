@@ -563,8 +563,8 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       <div id="fnActs" hidden style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fnGo" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Übernehmen</button><button class="btn" id="fnNo">Abbrechen</button></div>
       </div>
       <div class="panel" id="impRc" hidden>
-      <p class="muted" style="margin:0">In RepCount die Trainings als <b>CSV</b> exportieren und die Datei hier auswählen. Übernommen werden Datum, Übungen, Gewicht, Wiederholungen und Notizen. Die Datei wird nur auf diesem Gerät gelesen.</p>
-      <div><button class="btn" id="rcPick">RepCount-Datei auswählen</button><input type="file" id="rcFile" accept=".csv,text/csv,text/plain,*/*" hidden></div>
+      <p class="muted" style="margin:0">In RepCount die Trainings exportieren und die Datei hier auswählen. Das kann eine <b>.csv</b>- oder <b>.data</b>-Datei sein. Übernommen werden Datum, Übungen, Gewicht, Wiederholungen und Notizen. Die Datei wird nur auf diesem Gerät gelesen.</p>
+      <div><button class="btn" id="rcPick">RepCount-Datei auswählen</button><input type="file" id="rcFile" hidden></div>
       <div class="muted" id="rcPrev" aria-live="polite"></div>
       <div id="rcActs" hidden style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="rcGo" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Übernehmen</button><button class="btn" id="rcNo">Abbrechen</button></div>
       </div>
@@ -1606,7 +1606,7 @@ plDraft.color=freeColor();persist();setMode();renderAll();
   el('rcFile').addEventListener('change',async e=>{
     const file=e.target.files[0];e.target.value='';if(!file)return;pending=null;el('rcActs').hidden=true;el('rcPrev').textContent='Lese Datei …';
     try{if(file.size>20e6)throw new Error('size');pending=read(await file.text());preview(pending)}
-    catch(err){el('rcPrev').textContent=err.message==='format'?'Das sieht nicht nach einem RepCount-Export aus. Bitte die CSV-Datei aus RepCount auswählen.':err.message==='size'?'Die Datei ist zu groß.':'Die Datei konnte nicht gelesen werden.'}
+    catch(err){el('rcPrev').textContent=err.message==='format'?'Das sieht nicht nach einem RepCount-Export aus. Bitte die exportierte Datei aus RepCount auswählen (.csv oder .data).':err.message==='size'?'Die Datei ist zu groß.':'Die Datei konnte nicht gelesen werden.'}
   });
   el('rcNo').addEventListener('click',()=>{pending=null;el('rcActs').hidden=true;el('rcPrev').textContent=''});
   el('rcGo').addEventListener('click',()=>{
