@@ -1,6 +1,6 @@
 // RonnieLogman Service Worker
 // Bei jedem Update der App diese Versionsnummer erhöhen (z. B. v2, v3 ...).
-const CACHE = 'ronnielogman-v1';
+const CACHE = 'ronnielogman-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -27,6 +27,9 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
+  // Datenbank und Login (Supabase) nie aus dem Cache bedienen
+  if (new URL(req.url).hostname.endsWith('.supabase.co')) return;
 
   // Seitenaufrufe: erst Netz (damit Updates sofort ankommen), offline aus dem Cache
   if (req.mode === 'navigate') {

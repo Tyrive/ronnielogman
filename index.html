@@ -407,8 +407,25 @@ canvas{width:100%;height:190px;display:block}
   <!-- DATEN -->
   <section class="panel" id="tab-data" hidden>
     <div class="card">
+      <h2>Konto</h2>
+      <div id="acOut">
+        <p class="muted" style="margin:0 0 10px">Mit einem Konto werden deine Trainings online gesichert und sind auf jedem Gerät verfügbar.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label>E-Mail<input id="acEmail" type="email" autocomplete="email" inputmode="email"></label>
+          <label>Passwort<input id="acPw" type="password" autocomplete="current-password" minlength="6"></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="acLogin" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">Anmelden</button><button class="btn" id="acSignup">Konto erstellen</button></div>
+          <div class="muted" id="acMsg"></div>
+        </div>
+      </div>
+      <div id="acIn" hidden>
+        <p style="margin:0">Angemeldet als <b id="acMail"></b></p>
+        <p class="muted" style="margin:4px 0 10px">Status: <span id="syncState">–</span></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="acSyncNow">Jetzt synchronisieren</button><button class="btn danger" id="acLogout">Abmelden</button></div>
+      </div>
+    </div>
+    <div class="card">
       <h2>Backup</h2>
-      <p class="muted" style="margin:0">Deine Daten liegen nur in diesem Browser. Kopiere das Backup gelegentlich in eine Notiz oder Datei.</p>
+      <p class="muted" style="margin:0" id="dataHint">Deine Daten liegen nur in diesem Browser. Kopiere das Backup gelegentlich in eine Notiz oder Datei.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="exp">Backup erzeugen</button><button class="btn" id="copy">Kopieren</button></div>
       <textarea id="ioText" style="min-height:120px;font-family:var(--mono);font-size:12px" placeholder="Backup hier einfügen, um es wiederherzustellen"></textarea>
       <button class="btn" id="imp">Backup wiederherstellen</button>
@@ -606,7 +623,30 @@ function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.get
 const uid=()=>Math.random().toString(36).slice(2,10);
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n};
 const fmt=(n,d=1)=>n.toLocaleString('de-DE',{maximumFractionDigits:d});
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Eingangsprüfung: alle Daten (Speicher, Backup, Cloud) auf erlaubte Typen und Formate bringen */
+function cleanDb(p){
+  const STR=(v,max=300)=>typeof v==='string'||typeof v==='number'?String(v).slice(0,max):'';
+  const ID=v=>{const x=String(v??'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,40);return x||uid()};
+  const NUM=v=>{const n=typeof v==='number'?v:parseFloat(String(v??'').replace(',','.'));return Number.isFinite(n)&&n>=0&&n<1e6?n:0};
+  const NUMQ=v=>v===''||v==null?'':NUM(v); // leere Eingabe erlaubt (z. B. Gewicht offen)
+  const COL=v=>typeof v==='string'&&/^(#[0-9a-fA-F]{3,8}|--[a-z0-9-]{1,30}|var\(--[a-z0-9-]{1,30}\))$/.test(v)?v:FREE_COLOR;
+  const arr=v=>Array.isArray(v)?v:[];
+  const sessions=arr(p.sessions).filter(x=>x&&typeof x==='object'&&['kraft','lauf','sport'].includes(x.type)&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).map(x=>{
+    const o={id:ID(x.id),date:x.date,type:x.type,title:STR(x.title,80)};
+    if(x.note)o.note=STR(x.note,2000);
+    if(x.example)o.example=true;
+    if(x.planId)o.planId=ID(x.planId);
+    if(x.color)o.color=COL(x.color);
+    if(x.type==='kraft')o.exercises=arr(x.exercises).filter(e=>e&&typeof e==='object').map(e=>{const r={name:STR(e.name,80),sets:arr(e.sets).filter(z=>z&&typeof z==='object').map(z=>({w:NUMQ(z.w),r:NUMQ(z.r)}))};if(e.note)r.note=STR(e.note,500);return r});
+    if(x.type==='lauf'){o.kind=STR(x.kind,20).replace(/[^a-z0-9]/g,'');o.dist=NUM(x.dist);o.sec=NUM(x.sec);if(x.hr)o.hr=NUM(x.hr)}
+    if(x.type==='sport'){o.sport=STR(x.sport,60);o.min=NUM(x.min)}
+    return o});
+  const plans=arr(p.plans).filter(x=>x&&typeof x==='object').map(x=>({id:ID(x.id),name:STR(x.name,60),color:COL(x.color),exercises:arr(x.exercises).map(n=>STR(n,80)).filter(Boolean)}));
+  const custom=arr(p.custom).filter(x=>x&&typeof x==='object'&&x.n).map(x=>({n:STR(x.n,80),m:STR(x.m,60),e:STR(x.e,300)}));
+  const g=p.goals&&typeof p.goals==='object'?p.goals:{};
+  return{sessions,goals:{kraft:Math.min(14,NUM(g.kraft)||4),lauf:Math.min(14,NUM(g.lauf)||3)},custom,plans:Array.isArray(p.plans)?plans:undefined};
+}
 const mmss=s=>Math.floor(s/60)+':'+pad(Math.round(s%60));
 const WD=['Mo','Di','Mi','Do','Fr','Sa','So'];
 const todayIso=()=>iso(new Date());
@@ -626,12 +666,12 @@ function seed(){
   }
   return out;
 }
-function load(){try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&Array.isArray(p.sessions))return p}}catch(e){}return{sessions:[],goals:{kraft:4,lauf:3}}}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&Array.isArray(p.sessions))return cleanDb(p)}}catch(e){}return{sessions:[],goals:{kraft:4,lauf:3}}}
 let db=load();if(!Array.isArray(db.custom))db.custom=[];
 if(!Array.isArray(db.plans))db.plans=DEFAULT_PLANS.map(([n,c])=>({id:uid(),name:n,color:c,exercises:TEMPLATES[n].slice()}));
 db.sessions.forEach(s=>{if(s.type==='kraft'&&!s.planId){const p=db.plans.find(p=>p.name===s.title);if(p)s.planId=p.id}});
 db.sessions.forEach(s=>{if(s.type==='lauf'&&!s.kind){s.kind=runKind(s);s.title=RUN_KINDS.find(r=>r[0]===s.kind)[1]}});
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}if(window.cloudSave)window.cloudSave()}
 
 const $=id=>document.getElementById(id);
 let tab='train',selDate=todayIso(),calMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
@@ -659,7 +699,7 @@ function renderCal(){renderLegend();
   const start=monday(new Date(y,m,1));let html=WD.map(w=>`<div class="wd">${w}</div>`).join('');
   for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);if(i%7===0&&i>=28&&d.getMonth()!==m)break;
     const ds=iso(d),ss=sessionsOn(ds);
-    html+=`<button class="cd${d.getMonth()!==m?' out':''}${ds===todayIso()?' today':''}${ss.length?' has':''}" data-date="${ds}" aria-label="${d.getDate()}. ${ss.length?ss.map(s=>s.title).join(', '):'kein Training'}"><span class="n">${d.getDate()}</span><span class="dots">${ss.map(s=>mk(s)).join('')}</span></button>`}
+    html+=`<button class="cd${d.getMonth()!==m?' out':''}${ds===todayIso()?' today':''}${ss.length?' has':''}" data-date="${ds}" aria-label="${d.getDate()}. ${ss.length?esc(ss.map(s=>s.title).join(', ')):'kein Training'}"><span class="n">${d.getDate()}</span><span class="dots">${ss.map(s=>mk(s)).join('')}</span></button>`}
   $('cal').innerHTML=html;
   const pre=y+'-'+pad(m+1),ms=db.sessions.filter(s=>s.date.startsWith(pre));
   const km=ms.filter(s=>s.type==='lauf').reduce((a,s)=>a+s.dist,0),days=new Set(ms.map(s=>s.date)).size;
@@ -720,7 +760,7 @@ function renderLib(){
   const items=all.filter(x=>(libM==='Alle'||x.m===libM)&&(libE==='Alle'||x.e===libE)&&(!q||norm(x.n).includes(q)));
   let html='';
   if(raw&&!all.some(x=>norm(x.n)===q))html+=`<button class="libItem custom" data-add="${esc(raw)}"><span><b>„${esc(raw)}“</b><small>Als eigene Übung hinzufügen</small></span><i>+</i></button>`;
-  html+=items.map(x=>`<button class="libItem${inDraft.has(x.n)?' in':''}" data-add="${esc(x.n)}"><span><b>${esc(x.n)}</b><small>${x.m}${x.e?' · '+x.e:''}${x.own?' · eigene':''}</small></span><i>${inDraft.has(x.n)?'✓':'+'}</i></button>`).join('');
+  html+=items.map(x=>`<button class="libItem${inDraft.has(x.n)?' in':''}" data-add="${esc(x.n)}"><span><b>${esc(x.n)}</b><small>${esc(x.m)}${x.e?' · '+esc(x.e):''}${x.own?' · eigene':''}</small></span><i>${inDraft.has(x.n)?'✓':'+'}</i></button>`).join('');
   if(!html)html='<div class="muted" style="padding:10px 12px">Keine Übung für diese Filter. Tipp einen Namen ein, um eine eigene anzulegen.</div>';
   $('libList').innerHTML=html;$('libCount').textContent=items.length+' Übungen';
 }
@@ -873,7 +913,7 @@ function renderData(){}
 $('exp').addEventListener('click',()=>{$('ioText').value=JSON.stringify(db)});
 $('copy').addEventListener('click',()=>{if(!$('ioText').value)$('ioText').value=JSON.stringify(db);const t=$('ioText').value;
   try{navigator.clipboard.writeText(t).then(()=>toast('Kopiert'),()=>{$('ioText').select();toast('Text markiert, bitte manuell kopieren')})}catch(e){$('ioText').select()}});
-$('imp').addEventListener('click',()=>{try{const p=JSON.parse($('ioText').value);if(!Array.isArray(p.sessions))throw 0;db={sessions:p.sessions,goals:p.goals||{kraft:4,lauf:3},custom:Array.isArray(p.custom)?p.custom:[],plans:Array.isArray(p.plans)?p.plans:db.plans};persist();renderAll();toast('Wiederhergestellt')}catch(e){toast('Das Backup ist ungültig')}});
+$('imp').addEventListener('click',()=>{try{const p=JSON.parse($('ioText').value);if(!Array.isArray(p.sessions))throw 0;const c=cleanDb(p);db={...c,plans:c.plans||db.plans};persist();renderAll();toast('Wiederhergestellt')}catch(e){toast('Das Backup ist ungültig')}});
 $('wipe').addEventListener('click',e=>{const b=e.currentTarget;if(b.dataset.armed){db.sessions=[];persist();renderAll();toast('Alles gelöscht');delete b.dataset.armed;b.textContent='Alle Trainings löschen'}else{b.dataset.armed='1';b.textContent='Wirklich alles löschen? Nochmal tippen';setTimeout(()=>{delete b.dataset.armed;b.textContent='Alle Trainings löschen'},4000)}});
 $('clearEx').addEventListener('click',()=>{db.sessions=db.sessions.filter(s=>!s.example);persist();renderAll();toast('Beispiele gelöscht')});
 
@@ -1015,6 +1055,113 @@ plDraft.color=freeColor();persist();setMode();renderAll();
   requestAnimationFrame(()=>requestAnimationFrame(()=>sp.classList.add('in')));
   ts.push(setTimeout(finish,rm?700:1700));
   sp.addEventListener('click',finish);
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
+<script>
+/* Konto und Synchronisation (Supabase) */
+(function(){
+  const SB_URL='https://dzxsgsythodkjuzctunh.supabase.co';
+  const SB_KEY='sb_publishable_jkzCvRHKnDU510Y6Ppk0hw_qGgQkXu4';
+  const SKEY=KEY+'.sync'; // {uid, rev, dirty}
+  const el=id=>document.getElementById(id);
+  let sb=null,user=null,timer=null,busy=false;
+  const st=()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch(e){return{}}};
+  const setSt=o=>{try{localStorage.setItem(SKEY,JSON.stringify(o))}catch(e){}};
+  const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
+  const status=t=>{const s=el('syncState');if(s)s.textContent=t};
+
+  function normalize(p){const c=cleanDb(p&&typeof p==='object'?p:{});return{...c,plans:c.plans||db.plans}}
+  function byKey(a,b,k){const m=new Map();a.forEach(x=>m.set(x[k],x));b.forEach(x=>m.set(x[k],x));return[...m.values()]}
+  // Zusammenführen: Einträge aus beiden Quellen, bei gleicher ID gewinnt "lokal"
+  function merge(remote,local){return{sessions:byKey(remote.sessions,local.sessions,'id'),goals:local.goals||remote.goals,custom:byKey(remote.custom,local.custom,'n'),plans:byKey(remote.plans,local.plans,'id')}}
+  const hasOwnData=d=>d.sessions.some(s=>!s.example)||d.custom.length>0;
+
+  async function push(){
+    if(!user||busy)return;busy=true;status('Speichere …');
+    try{
+      const {data,error}=await sb.from('user_data').upsert({user_id:user.id,data:db}).select('updated_at').single();
+      if(error)throw error;
+      setSt({uid:user.id,rev:data.updated_at,dirty:false});status('Synchronisiert');
+    }catch(e){status('Offline – wird später synchronisiert')}
+    finally{busy=false}
+  }
+  async function pull(){
+    if(!user||busy)return;busy=true;status('Lade …');
+    let after=null;
+    try{
+      const s=st();
+      const {data,error}=await sb.from('user_data').select('data,updated_at').eq('user_id',user.id).maybeSingle();
+      if(error)throw error;
+      if(!data){after='push'}                                   // noch nichts in der Cloud
+      else if(s.uid!==user.id){                                 // erster Login auf diesem Gerät
+        const remote=normalize(data.data);
+        db=hasOwnData(db)?merge(remote,db):remote;
+        saveLocal();renderAll();setSt({uid:user.id,rev:data.updated_at,dirty:true});after='push';
+      }
+      else if(data.updated_at!==s.rev){                         // anderes Gerät hat gespeichert
+        const remote=normalize(data.data);
+        if(s.dirty){db=merge(remote,db);after='push'}else{db=remote}
+        saveLocal();renderAll();setSt({uid:user.id,rev:data.updated_at,dirty:!!s.dirty});
+        if(!after)status('Synchronisiert');
+      }
+      else if(s.dirty){after='push'}
+      else status('Synchronisiert');
+    }catch(e){status('Offline – lokale Daten werden genutzt')}
+    finally{busy=false}
+    if(after==='push')push();
+  }
+  // wird von persist() aufgerufen
+  window.cloudSave=function(){
+    if(!user)return;const s=st();setSt({...s,uid:user.id,dirty:true});
+    clearTimeout(timer);timer=setTimeout(push,1500);
+  };
+
+  function render(){
+    el('acOut').hidden=!!user;el('acIn').hidden=!user;
+    if(user)el('acMail').textContent=user.email||'';
+    el('dataHint').textContent=user
+      ?'Deine Daten werden automatisch in deinem Konto gesichert. Das Backup ist zusätzlich möglich.'
+      :'Ohne Konto liegen deine Daten nur in diesem Browser. Kopiere das Backup gelegentlich in eine Notiz oder Datei.';
+  }
+  function msg(t){el('acMsg').textContent=t||''}
+  async function auth(kind){
+    const email=el('acEmail').value.trim(),pw=el('acPw').value;
+    if(!email||pw.length<6){msg('Bitte E-Mail und ein Passwort mit mindestens 6 Zeichen eingeben.');return}
+    msg('Bitte warten …');
+    const r=kind==='up'?await sb.auth.signUp({email,password:pw}):await sb.auth.signInWithPassword({email,password:pw});
+    if(r.error){msg(r.error.message.includes('Invalid login')?'E-Mail oder Passwort falsch.':r.error.message.includes('already registered')?'Für diese E-Mail gibt es schon ein Konto. Bitte anmelden.':r.error.message);return}
+    if(kind==='up'&&!r.data.session){msg('Konto angelegt. Bitte den Link in der Bestätigungs-Mail öffnen und danach hier anmelden.');return}
+    msg('');el('acPw').value='';
+  }
+
+  function init(){
+    if(!window.supabase){status('Cloud nicht erreichbar');return}
+    sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'ronnielogman.auth'}});
+    el('acLogin').addEventListener('click',()=>auth('in'));
+    el('acSignup').addEventListener('click',()=>auth('up'));
+    el('acPw').addEventListener('keydown',e=>{if(e.key==='Enter')auth('in')});
+    el('acSyncNow').addEventListener('click',()=>{const s=st();s.dirty?push():pull()});
+    el('acLogout').addEventListener('click',async e=>{
+      const b=e.currentTarget;
+      if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Wirklich abmelden? Nochmal tippen';setTimeout(()=>{delete b.dataset.armed;b.textContent='Abmelden'},4000);return}
+      if(st().dirty)await push();
+      await sb.auth.signOut();
+      // Daten vom Gerät entfernen – sie liegen sicher im Konto
+      db={sessions:[],goals:{kraft:4,lauf:3},custom:[],plans:db.plans};saveLocal();setSt({});renderAll();
+      delete b.dataset.armed;b.textContent='Abmelden';toast('Abgemeldet');
+    });
+    sb.auth.onAuthStateChange((ev,session)=>{
+      const was=user&&user.id;user=session?session.user:null;render();
+      if(user&&user.id!==was)setTimeout(pull,0);
+      if(!user)status('');
+    });
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pull()});
+    window.addEventListener('online',()=>pull());
+    try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+  }
+  render();init();
 })();
 </script>
 
