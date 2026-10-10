@@ -308,6 +308,15 @@ html.lock,html.lock body{overflow:hidden}
 .picker.open .plus{transform:rotate(45deg)}
 .picker.open .chev{transform:rotate(180deg)}
 .picker,#editBar{scroll-margin-top:calc(64px + env(safe-area-inset-top,0px))}
+.exacts{display:flex;align-items:center;gap:2px;flex:none}
+.exacts .icon{display:grid;place-items:center;width:34px;height:34px;padding:0}
+.exacts .swap{color:var(--accent)}
+.exacts .swap:hover,.exacts .icon:hover{background:var(--surface2)}
+.exconfirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:6px;background:color-mix(in srgb,var(--warn) 12%,var(--surface));font-size:14px;font-weight:600}
+.exconfirm .yes{background:var(--del);border-color:var(--del);color:#fff}
+.card.swapping{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.swapnote{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:6px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));font-size:13px}
+.swapnote b{color:var(--accent)}
 .pickbody{display:flex;flex-direction:column;gap:10px}
 .pickclose{align-self:center}
 @media (prefers-reduced-motion:reduce){.pickhead .plus,.pickhead .chev{transition:none}}
@@ -379,6 +388,7 @@ html.lock,html.lock body{overflow:hidden}
       <div class="card picker" id="picker">
         <button class="pickhead" id="pickToggle" aria-expanded="false" aria-controls="pickBody"><span class="plus">+</span><span class="t">Übung hinzufügen</span><span class="last" id="libCount"></span><span class="chev">▾</span></button>
         <div class="pickbody" id="pickBody" hidden>
+          <div class="swapnote" id="swapNote" hidden></div>
           <input id="libQ" type="search" placeholder="Suchen, z. B. Rudern" aria-label="Übung suchen">
           <div class="chips scroll" id="libMuscle" aria-label="Muskelgruppe"></div>
           <div class="chips scroll" id="libEq" aria-label="Equipment"></div>
@@ -856,11 +866,21 @@ function renderLib(){
   html+=items.map(x=>`<button class="libItem${inDraft.has(x.n)?' in':''}" data-add="${esc(x.n)}"><span><b>${esc(x.n)}</b><small>${esc(x.m)}${x.e?' · '+esc(x.e):''}${x.own?' · eigene':''}</small></span><i>${inDraft.has(x.n)?'✓':'+'}</i></button>`).join('');
   if(!html)html='<div class="muted" style="padding:10px 12px">Keine Übung für diese Filter. Tipp einen Namen ein, um eine eigene anzulegen.</div>';
   $('libList').innerHTML=html;$('libCount').textContent=items.length+' Übungen';
+  const sw=swapIdx!==null&&draft.exercises[swapIdx];
+  document.querySelector('#pickToggle .t').textContent=sw?'Übung austauschen':'Übung hinzufügen';
+  $('swapNote').hidden=!sw;if(sw)$('swapNote').innerHTML=`<span>Ersetzt <b>${esc(sw.name)}</b>. Die neue Übung startet mit deinen Werten vom letzten Training.</span><button class="btn small" id="swapCancel">Abbrechen</button>`;
 }
 $('libQ').addEventListener('input',renderLib);
 $('libMuscle').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;libM=b.dataset.m;renderLib()});
 $('libEq').addEventListener('click',e=>{const b=e.target.closest('[data-eq]');if(!b)return;libE=b.dataset.eq;renderLib()});
 $('libList').addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;const n=b.dataset.add;
+  if(swapIdx!==null&&draft.exercises[swapIdx]){
+    const i=swapIdx,old=draft.exercises[i].name;
+    if(n===old){toast('Das ist schon diese Übung');return}
+    if(draft.exercises.some(x=>x.name===n)){toast('Ist schon im Training');return}
+    draft.exercises[i]=newEx(n);swapIdx=null;$('libQ').value='';setPicker(false);renderExList();
+    const c=$('exc'+i);if(c)c.scrollIntoView({block:'center',behavior:SMOOTH()});
+    toast(lastFor(n)?n+' eingesetzt, Werte vom letzten Training':n+' eingesetzt');return}
   if(draft.exercises.some(x=>x.name===n)){toast('Ist schon im Training');return}
   draft.exercises.push(newEx(n));if(!draft.title)draft.title='Frei';$('libQ').value='';setPicker(false);renderTpls();renderExList();const nc=$('exList').lastElementChild;if(nc)nc.scrollIntoView({block:'center',behavior:SMOOTH()});toast(n+' hinzugefügt')});
 
@@ -871,8 +891,9 @@ function renderExList(){
   $('planHint').hidden=!$('planHint').textContent;
   $('noteWrap').hidden=type==='kraft'&&!ready;$('save').hidden=type==='kraft'&&!ready;
   if(!draft.exercises.length){$('exList').innerHTML=ready?'<div class="card muted">Noch keine Übungen. Füge unten eine hinzu.</div>':'';return}
-  $('exList').innerHTML=draft.exercises.map((e,i)=>{const l=lastFor(e.name),inf=libInfo(e.name);return`<div class="card">
-    <div class="ex-head"><div><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div><button class="icon" data-delex="${i}" aria-label="Übung entfernen">✕</button></div>
+  $('exList').innerHTML=draft.exercises.map((e,i)=>{const l=lastFor(e.name),inf=libInfo(e.name);return`<div class="card${swapIdx===i?' swapping':''}" id="exc${i}">
+    <div class="ex-head"><div><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div><div class="exacts"><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
+    ${confirmDel===i?`<div class="exconfirm">Übung wirklich entfernen?<button class="btn small yes" data-delex="${i}">Entfernen</button><button class="btn small" data-nodel="1">Abbrechen</button></div>`:''}
     ${inf&&inf.tip?`<div class="cx-tip">Tipp: ${esc(inf.tip)}</div>`:''}
     ${l?`<div class="last">Zuletzt ${shortDay(l.date)}: ${setsSummary(l.sets)}</div>`:''}
     <div class="sets"><span class="h">#</span><span class="h">kg</span><span class="h">Wdh.</span><span></span>
@@ -907,12 +928,15 @@ $('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f)draft.e
 $('exList').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
   if(t.dataset.step){const[i,j,f,d]=t.dataset.step.split('_'),set=draft.exercises[+i].sets[+j],v=Math.max(0,Math.round((num(set[f])+(+d))*100)/100);
     set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');return}
-  if(t.dataset.delex!==undefined)draft.exercises.splice(+t.dataset.delex,1);
+  if(t.dataset.askdel!==undefined){confirmDel=+t.dataset.askdel}
+  else if(t.dataset.nodel){confirmDel=null}
+  else if(t.dataset.swapex!==undefined){confirmDel=null;startSwap(+t.dataset.swapex);return}
+  else if(t.dataset.delex!==undefined){const i=+t.dataset.delex;draft.exercises.splice(i,1);confirmDel=null;if(swapIdx!==null){if(swapIdx===i)swapIdx=null;else if(swapIdx>i)swapIdx--}}
   else if(t.dataset.addset!==undefined){const ex=draft.exercises[+t.dataset.addset],last=ex.sets[ex.sets.length-1]||{w:'',r:''};ex.sets.push({...last})}
   else if(t.dataset.delset){const[i,j]=t.dataset.delset.split('_').map(Number);draft.exercises[i].sets.splice(j,1)}
   else return;renderExList()});
 
-function resetForm(){draft={title:'',planId:null,exercises:[]};['lDist','lMin','lSec','lHr','sMin','sName','fNote'].forEach(id=>$(id).value='');runSel='z2';updPace()}
+function resetForm(){draft={title:'',planId:null,exercises:[]};swapIdx=null;confirmDel=null;['lDist','lMin','lSec','lHr','sMin','sName','fNote'].forEach(id=>$(id).value='');runSel='z2';updPace()}
 function startEdit(id){const s=db.sessions.find(x=>x.id===id);if(!s)return;resetForm();editingId=id;type=s.type;
   if(s.type==='kraft'){const p=planOf(s);draft={planId:p?p.id:null,title:p?p.name:'Frei',exercises:s.exercises.map(e=>({name:e.name,note:e.note||'',sets:e.sets.map(x=>({w:x.w||'',r:x.r}))}))}}
   else if(s.type==='lauf'){$('lDist').value=String(s.dist).replace('.',',');$('lMin').value=Math.floor(s.sec/60);$('lSec').value=pad(s.sec%60);$('lHr').value=s.hr||'';runSel=runKind(s);updPace()}
@@ -1132,9 +1156,12 @@ $('cxList').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.
 
 /* Übung hinzufügen: auf- und zuklappen */
 const SMOOTH=()=>matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth';
-let pickOpen=false;
-function setPicker(o){pickOpen=o;$('picker').classList.toggle('open',o);$('pickBody').hidden=!o;$('pickToggle').setAttribute('aria-expanded',String(o));if(o)renderLib()}
+let pickOpen=false,swapIdx=null,confirmDel=null;
+function startSwap(i){swapIdx=i;$('libQ').value='';const inf=libInfo(draft.exercises[i].name);libM=inf&&MUSCLES.includes(inf.m)?inf.m:'Alle';libE='Alle';
+  renderExList();setPicker(true);$('picker').scrollIntoView({block:'start',behavior:SMOOTH()})}
+function setPicker(o){pickOpen=o;if(!o&&swapIdx!==null){swapIdx=null;renderExList()}$('picker').classList.toggle('open',o);$('pickBody').hidden=!o;$('pickToggle').setAttribute('aria-expanded',String(o));if(o)renderLib()}
 $('pickToggle').addEventListener('click',()=>{setPicker(!pickOpen);if(pickOpen)$('picker').scrollIntoView({block:'start',behavior:SMOOTH()})});
+$('pickBody').addEventListener('click',e=>{if(e.target.id==='swapCancel'){setPicker(false);const c=document.querySelector('#exList .card');if(c)c.scrollIntoView({block:'nearest',behavior:SMOOTH()})}});
 $('pickClose').addEventListener('click',()=>{setPicker(false);$('picker').scrollIntoView({block:'nearest',behavior:SMOOTH()})});
 
 /* Startauswahl: Gym, Laufen oder Sport */
