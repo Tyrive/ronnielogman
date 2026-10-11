@@ -560,8 +560,10 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
     </div>
 
     <div class="panel" id="exPane" hidden>
-    <div class="card" id="cxForm">
-      <div class="formhead"><h2 id="cxTitle">Neue Übung anlegen</h2><button class="btn small" id="cxCancel" hidden>Abbrechen</button></div>
+    <div class="card picker" id="cxForm">
+      <button class="pickhead" id="cxToggle" aria-expanded="false" aria-controls="cxBody"><span class="plus">+</span><span class="t" id="cxTitle">Neue Übung anlegen</span><span class="chev">▾</span></button>
+      <div class="pickbody" id="cxBody" hidden>
+      <div class="formhead" id="cxHead" hidden><span></span><button class="btn small" id="cxCancel">Abbrechen</button></div>
       <label><span>Name <span class="req">*</span></span><input id="cxName" placeholder="z. B. Landmine Press" maxlength="60"></label>
       <div class="row">
         <label><span>Muskelgruppe <span class="req">*</span></span><select id="cxMuscle"></select></label>
@@ -577,6 +579,7 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
         <button class="btn small danger" id="cxDel" hidden>Übung löschen</button>
       </div>
       <div class="exconfirm" id="cxAsk" hidden></div>
+      </div>
     </div>
     <div class="card">
       <div class="ex-head"><h2>Alle Übungen</h2><span class="last" id="cxCount"></span></div>
@@ -1454,8 +1457,9 @@ const opt=(arr,sel,ph)=>(ph?`<option value="">${ph}</option>`:'')+arr.map(v=>`<o
 function cxFillSelects(m='',e='',m2=''){const ms=MUSCLES.slice(1),es=EQUIP.slice(1);
   $('cxMuscle').innerHTML=opt(ms,ms.includes(m)?m:'','Bitte wählen');$('cxEq').innerHTML=opt(es,es.includes(e)?e:'','Bitte wählen');$('cxM2').innerHTML=opt(ms,m2,'– keine –')}
 function cxKind(n){const c=db.custom.find(x=>x.n===n);if(c)return c.of?'edited':'own';if(!isHidden(n)&&LIB.find(x=>x.n===n))return'std';return'bare'}
-function cxReset(){cxEdit=null;['cxName','cxTip'].forEach(id=>$(id).value='');cxFillSelects();$('cxMsg').textContent='';$('cxTitle').textContent='Neue Übung anlegen';
-  $('cxCancel').hidden=true;$('cxSave').textContent='Übung speichern';$('cxExtra').hidden=true;$('cxInfo').hidden=true;$('cxAsk').hidden=true}
+function cxOpen(o){$('cxForm').classList.toggle('open',o);$('cxBody').hidden=!o;$('cxToggle').setAttribute('aria-expanded',String(o))}
+function cxReset(){cxEdit=null;cxOpen(false);$('cxHead').hidden=true;['cxName','cxTip'].forEach(id=>$(id).value='');cxFillSelects();$('cxMsg').textContent='';$('cxTitle').textContent='Neue Übung anlegen';
+  $('cxSave').textContent='Übung speichern';$('cxExtra').hidden=true;$('cxInfo').hidden=true;$('cxAsk').hidden=true}
 const KIND_TXT={own:'eigene',edited:'angepasst',bare:'importiert',std:''};
 function renderCx(){
   document.querySelectorAll('#exSub button').forEach(b=>b.classList.toggle('on',b.dataset.sub===exSub));$('plansPane').hidden=exSub!=='plans';$('exPane').hidden=exSub!=='ex';
@@ -1495,10 +1499,11 @@ $('cxSave').addEventListener('click',()=>{
   const was=cxEdit;persist();cxReset();renderAll();toast(was?'Übung aktualisiert':n+' angelegt');
 });
 $('cxCancel').addEventListener('click',()=>{cxReset();renderCx()});
+$('cxToggle').addEventListener('click',()=>{if(cxEdit){cxReset();renderCx();return}const o=$('cxBody').hidden;cxOpen(o);if(o)$('cxName').focus({preventScroll:true})});
 function cxStartEdit(n){
   const info=libInfo(n)||{n,m:'',e:''},k=cxKind(n);cxEdit=n;
   $('cxName').value=n;$('cxTip').value=info.tip||'';cxFillSelects(info.m,info.e,info.m2||'');
-  $('cxMsg').textContent='';$('cxTitle').textContent='Übung bearbeiten';$('cxCancel').hidden=false;$('cxSave').textContent='Änderungen speichern';$('cxAsk').hidden=true;
+  $('cxMsg').textContent='';$('cxTitle').textContent='Übung bearbeiten';cxOpen(true);$('cxHead').hidden=false;$('cxSave').textContent='Änderungen speichern';$('cxAsk').hidden=true;
   const c=db.custom.find(x=>x.n===n);
   $('cxInfo').hidden=false;$('cxInfo').textContent=k==='std'?'Standardübung. Deine Änderungen gelten nur für dich.':k==='edited'?`Angepasste Standardübung${c.of!==n?' (ursprünglich „'+c.of+'“)':''}.`:k==='bare'?'Aus einem Import oder Training. Ergänze hier Muskelgruppe und Equipment.':'Eigene Übung.';
   $('cxRestore').hidden=k!=='edited';$('cxDel').hidden=k!=='own';$('cxExtra').hidden=$('cxRestore').hidden&&$('cxDel').hidden;
