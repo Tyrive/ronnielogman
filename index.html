@@ -399,6 +399,8 @@ html.lock,html.lock body{overflow:hidden}
 .exacts .swap{color:var(--accent)}
 .exacts .swap:hover,.exacts .icon:hover{background:var(--surface2)}
 .exconfirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:6px;background:color-mix(in srgb,var(--warn) 12%,var(--surface));font-size:14px;font-weight:600}
+.cxextra{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.libItem small em{font-style:normal;color:var(--accent)}
 .exconfirm .yes{background:var(--del);border-color:var(--del);color:#fff}
 .card.swapping{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .swapnote{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:6px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));font-size:13px}
@@ -535,7 +537,7 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
     <div class="panel" id="plansPane">
       <div class="card" id="plForm">
         <div class="formhead"><h2 id="plTitle">Neuer Plan</h2><button class="btn small" id="plCancel" hidden>Abbrechen</button></div>
-        <label>Name <span class="req">*</span><input id="plName" placeholder="z. B. Oberkörper, Brust & Bizeps" maxlength="30"></label>
+        <label><span>Name <span class="req">*</span></span><input id="plName" placeholder="z. B. Oberkörper, Brust & Bizeps" maxlength="30"></label>
         <h3>Farbe</h3>
         <div class="swatches" id="plColors"></div>
         <div class="muted">Ein kleiner Punkt am Farbkreis heißt: Diese Farbe nutzt schon ein anderer Plan.</div>
@@ -560,20 +562,28 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
     <div class="panel" id="exPane" hidden>
     <div class="card" id="cxForm">
       <div class="formhead"><h2 id="cxTitle">Neue Übung anlegen</h2><button class="btn small" id="cxCancel" hidden>Abbrechen</button></div>
-      <label>Name <span class="req">*</span><input id="cxName" placeholder="z. B. Landmine Press" maxlength="60"></label>
+      <label><span>Name <span class="req">*</span></span><input id="cxName" placeholder="z. B. Landmine Press" maxlength="60"></label>
       <div class="row">
-        <label>Muskelgruppe <span class="req">*</span><select id="cxMuscle"></select></label>
-        <label>Equipment <span class="req">*</span><select id="cxEq"></select></label>
+        <label><span>Muskelgruppe <span class="req">*</span></span><select id="cxMuscle"></select></label>
+        <label><span>Equipment <span class="req">*</span></span><select id="cxEq"></select></label>
       </div>
       <label>Zusätzlich beansprucht<select id="cxM2"></select></label>
       <label>Ausführungstipp<input id="cxTip" placeholder="z. B. Ellbogen eng am Körper, 3 s ablassen" maxlength="140"></label>
       <div class="msg-err" id="cxMsg"></div>
+      <div class="muted" id="cxInfo" hidden></div>
       <button class="primary" id="cxSave">Übung speichern</button>
+      <div class="cxextra" id="cxExtra" hidden>
+        <button class="btn small" id="cxRestore" hidden>Original wiederherstellen</button>
+        <button class="btn small danger" id="cxDel" hidden>Übung löschen</button>
+      </div>
+      <div class="exconfirm" id="cxAsk" hidden></div>
     </div>
     <div class="card">
-      <div class="ex-head"><h2>Meine Übungen</h2><span class="last" id="cxCount"></span></div>
-      <div class="panel" id="cxList"></div>
-      <div class="muted">Eigene Übungen erscheinen im Reiter Training unter „Übung hinzufügen“, zusammen mit den Standardübungen.</div>
+      <div class="ex-head"><h2>Alle Übungen</h2><span class="last" id="cxCount"></span></div>
+      <input id="cxQ" type="search" placeholder="Übung suchen" aria-label="Übung suchen" autocomplete="off">
+      <div class="chips scroll" id="cxMf" aria-label="Muskelgruppe"></div>
+      <div class="lib" id="cxList"></div>
+      <div class="muted">Tippe auf eine Übung, um Name, Muskelgruppe, Equipment oder Tipp zu ändern. Das gilt auch für Standardübungen; Änderungen am Namen werden in allen Trainings und Plänen übernommen.</div>
     </div>
     </div>
   </section>
@@ -846,7 +856,8 @@ function iconFor(name){
   exIconCache.set(name,hit);return hit;
 }
 const exIcon=(name,size)=>{const f=iconFor(name);return f?`<img class="exi${size?' '+size:''}" src="icons/ex/${f}.svg" alt="" loading="lazy" decoding="async">`:''};
-const libInfo=n=>LIB.find(x=>x.n===n)||(db&&db.custom||[]).find(x=>x.n===n);
+const isHidden=n=>!!(db&&db.hidden&&db.hidden.includes(n));
+const libInfo=n=>(db&&db.custom||[]).find(x=>x.n===n)||(!isHidden(n)&&LIB.find(x=>x.n===n))||undefined;
 const BASE={'Schulterdrücken (KH)':16,'Trizepsdrücken (KH)':10,'Rudern (KH)':24,'Bizepscurls (KH)':12,'Kniebeugen (KH)':24,'Rumänisches Kreuzheben (KH)':28,'Ausfallschritte':14,'Wadenheben':20,'Bankdrücken':70,'Kniebeugen':85,'Kreuzheben':110,'Latzug':60};
 
 /* Kategorien und Markierungen */
@@ -905,9 +916,10 @@ function cleanDb(p){
     if(x.type==='sport'){o.sport=STR(x.sport,60);o.min=NUM(x.min)}
     return o});
   const plans=arr(p.plans).filter(x=>x&&typeof x==='object').map(x=>({id:ID(x.id),name:STR(x.name,60),color:COL(x.color),exercises:arr(x.exercises).map(n=>STR(n,80)).filter(Boolean)}));
-  const custom=arr(p.custom).filter(x=>x&&typeof x==='object'&&x.n).map(x=>({n:STR(x.n,80),m:STR(x.m,60),e:STR(x.e,300)}));
+  const custom=arr(p.custom).filter(x=>x&&typeof x==='object'&&x.n).map(x=>{const o={n:STR(x.n,80),m:STR(x.m,60),e:STR(x.e,300)};if(x.m2)o.m2=STR(x.m2,60);if(x.tip)o.tip=STR(x.tip,200);if(x.of)o.of=STR(x.of,80);return o});
+  const hidden=arr(p.hidden).map(n=>STR(n,80)).filter(Boolean);
   const g=p.goals&&typeof p.goals==='object'?p.goals:{};
-  return{sessions,goals:{kraft:Math.min(14,NUM(g.kraft)||4),lauf:Math.min(14,NUM(g.lauf)||3)},custom,plans:Array.isArray(p.plans)?plans:undefined};
+  return{sessions,goals:{kraft:Math.min(14,NUM(g.kraft)||4),lauf:Math.min(14,NUM(g.lauf)||3)},custom,hidden,plans:Array.isArray(p.plans)?plans:undefined};
 }
 const mmss=s=>Math.floor(s/60)+':'+pad(Math.round(s%60));
 const WD=['Mo','Di','Mi','Do','Fr','Sa','So'];
@@ -929,7 +941,7 @@ function seed(){
   return out;
 }
 function load(){try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&Array.isArray(p.sessions))return cleanDb(p)}}catch(e){}return{sessions:[],goals:{kraft:4,lauf:3}}}
-let db=load();if(!Array.isArray(db.custom))db.custom=[];
+let db=load();if(!Array.isArray(db.custom))db.custom=[];if(!Array.isArray(db.hidden))db.hidden=[];
 if(!Array.isArray(db.plans))db.plans=DEFAULT_PLANS.map(([n,c])=>({id:uid(),name:n,color:c,exercises:TEMPLATES[n].slice()}));
 db.sessions.forEach(s=>{if(s.type==='kraft'&&!s.planId){const p=db.plans.find(p=>p.name===s.title);if(p)s.planId=p.id}});
 db.sessions.forEach(s=>{if(s.type==='lauf'&&!s.kind){s.kind=runKind(s);s.title=RUN_KINDS.find(r=>r[0]===s.kind)[1]}});
@@ -1046,7 +1058,7 @@ function renderTpls(){$('tpls').innerHTML=db.plans.map(p=>`<button class="chip${
 
 let libM='Alle',libE='Alle';
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-function libItems(){return LIB.concat(db.custom.map(c=>({...c,own:1})),allNames().filter(n=>!libInfo(n)).map(n=>({n,m:'Eigene',e:''})))}
+function libItems(){const cn=new Set(db.custom.map(c=>c.n));return LIB.filter(x=>!isHidden(x.n)&&!cn.has(x.n)).concat(db.custom.map(c=>c.of?{...c,edited:1}:{...c,own:1}),allNames().filter(n=>!libInfo(n)).map(n=>({n,m:'Eigene',e:'',bare:1})))}
 function renderLib(){
   $('libMuscle').innerHTML=MUSCLES.map(m=>`<button class="chip${m===libM?' on':''}" data-m="${m}">${m}</button>`).join('');
   $('libEq').innerHTML=EQUIP.map(e=>`<button class="chip${e===libE?' on':''}" data-eq="${e}">${e}</button>`).join('');
@@ -1436,48 +1448,67 @@ $('presets').addEventListener('click',e=>{const b=e.target.closest('[data-preset
   PRESETS[b.dataset.preset].forEach(([n,ex])=>{if(db.plans.some(p=>norm(p.name)===norm(n)))return;db.plans.push({id:uid(),name:n,color:freeColor(),exercises:ex.slice()});added++});
   persist();if(!plEdit)plDraft.color=freeColor();renderAll();toast(added?added+(added===1?' Plan':' Pläne')+' hinzugefügt':'Alle Pläne gibt es schon')});
 
-/* Übungen (eigene) */
-let cxEdit=null;
+/* Übungen: alle anzeigen und bearbeiten (Standard, eigene, importierte) */
+let cxEdit=null,cxM='Alle';
 const opt=(arr,sel,ph)=>(ph?`<option value="">${ph}</option>`:'')+arr.map(v=>`<option${v===sel?' selected':''}>${v}</option>`).join('');
 function cxFillSelects(m='',e='',m2=''){const ms=MUSCLES.slice(1),es=EQUIP.slice(1);
-  $('cxMuscle').innerHTML=opt(ms,m,'Bitte wählen');$('cxEq').innerHTML=opt(es,e,'Bitte wählen');$('cxM2').innerHTML=opt(ms,m2,'– keine –')}
-function cxReset(){cxEdit=null;['cxName','cxTip'].forEach(id=>$(id).value='');cxFillSelects();$('cxMsg').textContent='';$('cxTitle').textContent='Neue Übung anlegen';$('cxCancel').hidden=true;$('cxSave').textContent='Übung speichern'}
+  $('cxMuscle').innerHTML=opt(ms,ms.includes(m)?m:'','Bitte wählen');$('cxEq').innerHTML=opt(es,es.includes(e)?e:'','Bitte wählen');$('cxM2').innerHTML=opt(ms,m2,'– keine –')}
+function cxKind(n){const c=db.custom.find(x=>x.n===n);if(c)return c.of?'edited':'own';if(!isHidden(n)&&LIB.find(x=>x.n===n))return'std';return'bare'}
+function cxReset(){cxEdit=null;['cxName','cxTip'].forEach(id=>$(id).value='');cxFillSelects();$('cxMsg').textContent='';$('cxTitle').textContent='Neue Übung anlegen';
+  $('cxCancel').hidden=true;$('cxSave').textContent='Übung speichern';$('cxExtra').hidden=true;$('cxInfo').hidden=true;$('cxAsk').hidden=true}
+const KIND_TXT={own:'eigene',edited:'angepasst',bare:'importiert',std:''};
 function renderCx(){
   document.querySelectorAll('#exSub button').forEach(b=>b.classList.toggle('on',b.dataset.sub===exSub));$('plansPane').hidden=exSub!=='plans';$('exPane').hidden=exSub!=='ex';
   if(exSub==='plans')renderPlans();
   if(!$('cxMuscle').options.length)cxFillSelects();
-  $('cxCount').textContent=db.custom.length+(db.custom.length===1?' Übung':' Übungen');
-  const list=[...db.custom].sort((a,b)=>a.n.localeCompare(b.n,'de'));
-  $('cxList').innerHTML=list.length?list.map(c=>`<div class="entry${c.n===cxEdit?' editing':''}" data-cx="${esc(c.n)}" role="button" tabindex="0" aria-label="${esc(c.n)} bearbeiten" style="--c:var(--accent)"><div class="bar"></div><div style="min-width:0">
-      <div class="title">${exIcon(c.n,'s')}${esc(c.n)}${c.n===cxEdit?'<span class="hint">wird bearbeitet</span>':''}<button class="delbtn" data-cxdel="1" aria-label="${esc(c.n)} löschen">−</button></div>
-      <div class="tag">${esc(c.m)}${c.m2?' + '+esc(c.m2):''} · ${esc(c.e)}</div>
-      ${c.tip?`<div class="cx-tip">${esc(c.tip)}</div>`:''}
-      <div class="confirm">Übung löschen? Bisherige Trainings bleiben erhalten.<button class="btn small yes" data-cxyes="1">Löschen</button><button class="btn small" data-no="1">Abbrechen</button></div></div></div>`).join('')
-    :'<div class="muted">Noch keine eigenen Übungen. Leg oben deine erste an.</div>';
+  $('cxMf').innerHTML=MUSCLES.concat('Eigene').map(m=>`<button class="chip${m===cxM?' on':''}" data-cm="${m}">${m}</button>`).join('');
+  const q=norm($('cxQ').value.trim()),all=libItems().sort((a,b)=>a.n.localeCompare(b.n,'de'));
+  const items=all.filter(x=>(cxM==='Alle'||x.m===cxM)&&(!q||norm(x.n).includes(q)));
+  $('cxCount').textContent=items.length+' von '+all.length;
+  $('cxList').innerHTML=items.length?items.map(x=>{const k=cxKind(x.n);return`<button class="libItem${x.n===cxEdit?' in':''}" data-cx="${esc(x.n)}">${exIcon(x.n,'m')}<span class="li"><b>${esc(x.n)}</b><small>${esc(x.m||'–')}${x.m2?' + '+esc(x.m2):''}${x.e?' · '+esc(x.e):''}${KIND_TXT[k]?' · <em>'+KIND_TXT[k]+'</em>':''}</small></span><i>✎</i></button>`}).join('')
+    :'<div class="muted" style="padding:10px 12px">Keine Übung gefunden.</div>';
 }
+$('cxQ').addEventListener('input',renderCx);
+$('cxMf').addEventListener('click',e=>{const b=e.target.closest('[data-cm]');if(!b)return;cxM=b.dataset.cm;renderCx()});
+function renameEverywhere(from,to){if(from===to)return;
+  db.sessions.forEach(s=>(s.exercises||[]).forEach(x=>{if(x.name===from)x.name=to}));
+  db.plans.forEach(p=>{p.exercises=p.exercises.map(n=>n===from?to:n)});
+  draft.exercises.forEach(x=>{if(x.name===from)x.name=to});plDraft.exercises=plDraft.exercises.map(n=>n===from?to:n);
+  if(progEx===from)progEx=to;exIconCache.clear()}
 $('cxSave').addEventListener('click',()=>{
   const n=$('cxName').value.trim().replace(/\s+/g,' '),m=$('cxMuscle').value,e=$('cxEq').value,m2=$('cxM2').value,tip=$('cxTip').value.trim();
   if(!n){$('cxMsg').textContent='Bitte gib einen Namen ein.';return}
   if(!m){$('cxMsg').textContent='Bitte wähle die Muskelgruppe.';return}
   if(!e){$('cxMsg').textContent='Bitte wähle das Equipment.';return}
-  const clash=LIB.concat(db.custom).find(x=>norm(x.n)===norm(n)&&x.n!==cxEdit);
-  if(clash){$('cxMsg').textContent=`„${clash.n}“ gibt es schon${LIB.includes(clash)?' in den Standardübungen':''}.`;return}
+  const clash=libItems().find(x=>norm(x.n)===norm(n)&&x.n!==cxEdit);
+  if(clash){$('cxMsg').textContent=`„${clash.n}“ gibt es schon.`;return}
   const item={n,m,e};if(m2&&m2!==m)item.m2=m2;if(tip)item.tip=tip;
-  if(cxEdit){const i=db.custom.findIndex(x=>x.n===cxEdit);db.custom[i]=item;
-    if(cxEdit!==n){db.sessions.forEach(s=>(s.exercises||[]).forEach(x=>{if(x.name===cxEdit)x.name=n}));draft.exercises.forEach(x=>{if(x.name===cxEdit)x.name=n})}}
-  else db.custom.push(item);
+  if(cxEdit){
+    const k=cxKind(cxEdit),i=db.custom.findIndex(x=>x.n===cxEdit);
+    if(k==='own'||k==='edited'){if(db.custom[i].of)item.of=db.custom[i].of;db.custom[i]=item}
+    else if(k==='std'){item.of=cxEdit;db.custom.push(item);if(n!==cxEdit&&!db.hidden.includes(cxEdit))db.hidden.push(cxEdit)}
+    else db.custom.push(item);
+    if(item.of&&n===item.of)db.hidden=db.hidden.filter(x=>x!==item.of);
+    else if(item.of&&!db.hidden.includes(item.of)&&n!==item.of)db.hidden.push(item.of);
+    renameEverywhere(cxEdit,n);
+  }else db.custom.push(item);
   const was=cxEdit;persist();cxReset();renderAll();toast(was?'Übung aktualisiert':n+' angelegt');
 });
 $('cxCancel').addEventListener('click',()=>{cxReset();renderCx()});
-function cxStartEdit(n){const c=db.custom.find(x=>x.n===n);if(!c)return;cxEdit=n;$('cxName').value=c.n;$('cxTip').value=c.tip||'';cxFillSelects(c.m,c.e,c.m2||'');
-  $('cxMsg').textContent='';$('cxTitle').textContent='Übung bearbeiten';$('cxCancel').hidden=false;$('cxSave').textContent='Änderungen speichern';renderCx();
-  $('cxForm').scrollIntoView({behavior:'auto',block:'start'})}
-$('cxList').addEventListener('click',e=>{const card=e.target.closest('.entry');if(!card)return;const b=e.target.closest('button'),n=card.dataset.cx;
-  if(b&&b.dataset.cxdel){card.classList.toggle('asking');return}
-  if(b&&b.dataset.no){card.classList.remove('asking');return}
-  if(b&&b.dataset.cxyes){db.custom=db.custom.filter(x=>x.n!==n);if(cxEdit===n)cxReset();persist();renderAll();toast('Übung gelöscht');return}
-  if(card.classList.contains('asking'))return;cxStartEdit(n)});
-$('cxList').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('entry')){e.preventDefault();cxStartEdit(e.target.dataset.cx)}});
+function cxStartEdit(n){
+  const info=libInfo(n)||{n,m:'',e:''},k=cxKind(n);cxEdit=n;
+  $('cxName').value=n;$('cxTip').value=info.tip||'';cxFillSelects(info.m,info.e,info.m2||'');
+  $('cxMsg').textContent='';$('cxTitle').textContent='Übung bearbeiten';$('cxCancel').hidden=false;$('cxSave').textContent='Änderungen speichern';$('cxAsk').hidden=true;
+  const c=db.custom.find(x=>x.n===n);
+  $('cxInfo').hidden=false;$('cxInfo').textContent=k==='std'?'Standardübung. Deine Änderungen gelten nur für dich.':k==='edited'?`Angepasste Standardübung${c.of!==n?' (ursprünglich „'+c.of+'“)':''}.`:k==='bare'?'Aus einem Import oder Training. Ergänze hier Muskelgruppe und Equipment.':'Eigene Übung.';
+  $('cxRestore').hidden=k!=='edited';$('cxDel').hidden=k!=='own';$('cxExtra').hidden=$('cxRestore').hidden&&$('cxDel').hidden;
+  renderCx();$('cxForm').scrollIntoView({behavior:'auto',block:'start'});$('cxName').focus({preventScroll:true})}
+$('cxList').addEventListener('click',e=>{const b=e.target.closest('[data-cx]');if(b)cxStartEdit(b.dataset.cx)});
+function cxConfirm(text,label,fn){$('cxAsk').innerHTML=`${text}<button class="btn small yes" id="cxYes">${label}</button><button class="btn small" id="cxNo">Abbrechen</button>`;$('cxAsk').hidden=false;
+  $('cxYes').onclick=fn;$('cxNo').onclick=()=>{$('cxAsk').hidden=true}}
+$('cxDel').addEventListener('click',()=>cxConfirm('Übung löschen? Bisherige Trainings bleiben erhalten.','Löschen',()=>{const n=cxEdit;db.custom=db.custom.filter(x=>x.n!==n);persist();cxReset();renderAll();toast('Übung gelöscht')}));
+$('cxRestore').addEventListener('click',()=>cxConfirm('Originale Standardübung wiederherstellen?','Wiederherstellen',()=>{const c=db.custom.find(x=>x.n===cxEdit);if(!c)return;
+  db.custom=db.custom.filter(x=>x!==c);db.hidden=db.hidden.filter(x=>x!==c.of);renameEverywhere(c.n,c.of);persist();cxReset();renderAll();toast('Original wiederhergestellt')}));
 
 /* Übung hinzufügen: auf- und zuklappen */
 const SMOOTH=()=>matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth';
@@ -1827,7 +1858,7 @@ plDraft.color=freeColor();persist();setMode();renderAll();
   function normalize(p){const c=cleanDb(p&&typeof p==='object'?p:{});return{...c,plans:c.plans||db.plans}}
   function byKey(a,b,k){const m=new Map();a.forEach(x=>m.set(x[k],x));b.forEach(x=>m.set(x[k],x));return[...m.values()]}
   // Zusammenführen: Einträge aus beiden Quellen, bei gleicher ID gewinnt "lokal"
-  function merge(remote,local){return{sessions:byKey(remote.sessions,local.sessions,'id'),goals:local.goals||remote.goals,custom:byKey(remote.custom,local.custom,'n'),plans:byKey(remote.plans,local.plans,'id')}}
+  function merge(remote,local){return{sessions:byKey(remote.sessions,local.sessions,'id'),goals:local.goals||remote.goals,custom:byKey(remote.custom,local.custom,'n'),hidden:[...new Set([...(remote.hidden||[]),...(local.hidden||[])])],plans:byKey(remote.plans,local.plans,'id')}}
   const hasOwnData=d=>d.sessions.some(s=>!s.example)||d.custom.length>0;
 
   async function push(){
@@ -1901,7 +1932,7 @@ plDraft.color=freeColor();persist();setMode();renderAll();
       if(st().dirty)await push();
       await sb.auth.signOut();
       // Daten vom Gerät entfernen – sie liegen sicher im Konto
-      db={sessions:[],goals:{kraft:4,lauf:3},custom:[],plans:db.plans};saveLocal();setSt({});renderAll();
+      db={sessions:[],goals:{kraft:4,lauf:3},custom:[],hidden:[],plans:db.plans};saveLocal();setSt({});renderAll();
       delete b.dataset.armed;b.textContent='Abmelden';toast('Abgemeldet');
     });
     sb.auth.onAuthStateChange((ev,session)=>{
