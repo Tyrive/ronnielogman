@@ -314,7 +314,7 @@ canvas{width:100%;height:210px;display:block}
 .timer.setting .tgear svg{transform:rotate(60deg)}
 .timer .tgear svg{transition:transform .3s}
 .tset{max-width:560px;margin:0 auto 10px;display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface2)}
-.tnote{display:flex;align-items:flex-start;gap:10px;text-transform:none;letter-spacing:0;font:600 14px var(--body);color:var(--ink);border-top:1px solid var(--line);padding-top:10px;cursor:pointer}
+.tnote{display:flex;flex-direction:row;align-items:flex-start;gap:10px;text-transform:none;letter-spacing:0;font:600 14px var(--body);color:var(--ink);border-top:1px solid var(--line);padding-top:10px;cursor:pointer}
 .tnote input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
 .tnote small{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:2px}
 .tset-h{display:flex;align-items:center;justify-content:space-between}
@@ -706,7 +706,7 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
     <div class="tset-h"><b>Pausenzeit</b><button class="icon" id="tSetX" aria-label="Schließen">✕</button></div>
     <div class="tstep"><button class="btn" data-tstep="-15" aria-label="15 Sekunden weniger">−15 s</button><span id="tSetVal">1:30</span><button class="btn" data-tstep="15" aria-label="15 Sekunden mehr">+15 s</button></div>
     <div class="chips" id="tPresets"></div>
-    <label class="tnote" id="tWakeWrap" hidden><input type="checkbox" id="tWake"><span>Bildschirm während der Pause anlassen<small>Der Bildschirm geht während der Pause nicht aus, so kommen Ton und Vibration am Ende sicher an.</small></span></label>
+    <label class="tnote"><input type="checkbox" id="tSig"><span>Ton und Vibration am Pausenende<small>Klappt nur, solange die App geöffnet ist.</small></span></label>
   </div>
   <div class="in">
     <span class="clock" id="clock">1:30</span><span class="lbl" id="tLbl">Pause</span>
@@ -1672,21 +1672,17 @@ function tick(){const left=Math.max(0,Math.round((tEnd-Date.now())/1000));$('clo
   if(left<=0){clearInterval(tInt);tInt=null;restDone();
     setTimeout(()=>{$('timer').classList.remove('flash');if(!running())idle()},2200);$('tGo').textContent='Start';$('timer').classList.remove('run');$('tLbl').textContent='Fertig'}}
 function restDone(){
-  $('timer').classList.add('flash');beep();
-  try{navigator.vibrate&&navigator.vibrate([300,120,300,120,500])}catch(e){}
+  $('timer').classList.add('flash');
+  if(sigOn){beep();try{navigator.vibrate&&navigator.vibrate([300,120,300,120,500])}catch(e){}}
   if(document.visibilityState!=='hidden')toast('⏰ Pause vorbei – weiter geht\'s');
-  wakeOff();
 }
-/* Bildschirm wach halten während der Pause (Screen Wake Lock, Android und iPhone) */
-const WAKE_KEY='ronnielogman.wake',canWake='wakeLock' in navigator;
-let wakeOn=canWake;try{const v=localStorage.getItem(WAKE_KEY);if(v!==null)wakeOn=v==='1'&&canWake}catch(e){}
-let wakeLk=null;
-async function wakeOnNow(){if(!wakeOn||wakeLk)return;try{wakeLk=await navigator.wakeLock.request('screen');wakeLk.addEventListener('release',()=>{wakeLk=null})}catch(e){wakeLk=null}}
-function wakeOff(){try{wakeLk&&wakeLk.release()}catch(e){}wakeLk=null}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&running()){tick();if(running())wakeOnNow()}});
-function startRest(){wakeOnNow();try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume()}catch(err){}
+/* Signal am Pausenende (Ton + Vibration), nur solange die App offen ist */
+const SIG_KEY='ronnielogman.signal';
+let sigOn=true;try{sigOn=localStorage.getItem(SIG_KEY)!=='0'}catch(e){}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&running())tick()});
+function startRest(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume()}catch(err){}
   tEnd=Date.now()+rest*1000;$('timer').classList.add('run');$('timer').classList.remove('flash');$('tGo').textContent='Stopp';$('tLbl').textContent='läuft';clearInterval(tInt);tInt=setInterval(tick,250);tick()}
-function stopRest(){clearInterval(tInt);tInt=null;idle();wakeOff()}
+function stopRest(){clearInterval(tInt);tInt=null;idle()}
 $('tGo').addEventListener('click',()=>{running()?stopRest():startRest()});
 $('clock').addEventListener('click',()=>{if(!running())startRest()});
 function setRest(v){rest=Math.max(15,Math.min(600,v));try{localStorage.setItem(REST_KEY,String(rest))}catch(e){}renderRestSet();if(!running())idle()}
@@ -1700,10 +1696,10 @@ $('tSet').addEventListener('click',e=>{const p=e.target.closest('[data-rest]');i
 document.addEventListener('click',e=>{if(!$('tSet').hidden&&!e.target.closest('#timer'))openRestSet(false)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('tSet').hidden)openRestSet(false)});
 let lastSet=null;
-function renderNoteOpt(){$('tWakeWrap').hidden=!canWake;$('tWake').checked=wakeOn}
-$('tWake').addEventListener('change',e=>{wakeOn=e.target.checked;try{localStorage.setItem(WAKE_KEY,wakeOn?'1':'0')}catch(_){}if(wakeOn&&running())wakeOnNow();else if(!wakeOn)wakeOff()});
+function renderNoteOpt(){$('tSig').checked=sigOn}
+$('tSig').addEventListener('change',e=>{sigOn=e.target.checked;try{localStorage.setItem(SIG_KEY,sigOn?'1':'0')}catch(_){}});
 /* Aufräumen: frühere Mitteilungs-/Push-Einstellung entfernen */
-try{['ronnielogman.notify','ronnielogman.device'].forEach(k=>localStorage.removeItem(k))}catch(e){}
+try{['ronnielogman.notify','ronnielogman.device','ronnielogman.wake'].forEach(k=>localStorage.removeItem(k))}catch(e){}
 if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.ready.then(async reg=>{
   try{const s=reg.pushManager&&await reg.pushManager.getSubscription();if(s)await s.unsubscribe()}catch(e){}
   try{(await reg.getNotifications({tag:'rest'})).forEach(n=>n.close())}catch(e){}}).catch(()=>{});
