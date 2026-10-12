@@ -1,0 +1,6 @@
+# Supabase-Konfiguration für die GitHub-Integration (Deploy to production)
+project_id = "dzxsgsythodkjuzctunh"
+
+[functions.rest-push]
+# Die Funktion prüft Anfragen selbst; die App nutzt einen Publishable Key (kein JWT)
+verify_jwt = false

@@ -1,6 +1,6 @@
 // RonnieLogman Service Worker
 // Bei jedem Update der App diese Versionsnummer erhöhen (z. B. v2, v3 ...).
-const CACHE = 'ronnielogman-v25';
+const CACHE = 'ronnielogman-v26';
 const APP_SHELL = [
   './',
   './index.html',
@@ -80,5 +80,23 @@ self.addEventListener('notificationclick', event => {
       for (const c of list) { if ('focus' in c) return c.focus(); }
       return self.clients.openWindow ? self.clients.openWindow('./') : undefined;
     })
+  );
+});
+
+// Push vom Server (Supabase-Funktion rest-push): Mitteilung am Pausenende, auch wenn die App im Hintergrund ist
+self.addEventListener('push', event => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { title: 'Pause vorbei', body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(
+    self.registration.showNotification(d.title || 'Pause vorbei', {
+      body: d.body || '',
+      tag: 'rest',
+      renotify: true,
+      vibrate: [300, 120, 300, 120, 500],
+      icon: 'icons/icon-192.png',
+      badge: 'icons/favicon-32.png',
+      data: { url: './' }
+    }).then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(list => list.forEach(c => c.postMessage({ type: 'rest-push' })))
   );
 });
