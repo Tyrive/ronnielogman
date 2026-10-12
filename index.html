@@ -706,8 +706,7 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
     <div class="tset-h"><b>Pausenzeit</b><button class="icon" id="tSetX" aria-label="Schließen">✕</button></div>
     <div class="tstep"><button class="btn" data-tstep="-15" aria-label="15 Sekunden weniger">−15 s</button><span id="tSetVal">1:30</span><button class="btn" data-tstep="15" aria-label="15 Sekunden mehr">+15 s</button></div>
     <div class="chips" id="tPresets"></div>
-    <label class="tnote" id="tWakeWrap" hidden><input type="checkbox" id="tWake"><span>Bildschirm während der Pause anlassen<small>Der Bildschirm geht während der Pause nicht aus, so kommt der Hinweis am Ende sicher an.</small></span></label>
-    <label class="tnote" id="tNoteWrap" hidden><input type="checkbox" id="tNotify"><span>Hinweis am Pausenende, auch in anderen Apps<small id="tNoteHint">Mitteilung mit Vibration, wenn die Pause vorbei ist, auch bei gesperrtem Handy.</small></span></label>
+    <label class="tnote" id="tWakeWrap" hidden><input type="checkbox" id="tWake"><span>Bildschirm während der Pause anlassen<small>Der Bildschirm geht während der Pause nicht aus, so kommen Ton und Vibration am Ende sicher an.</small></span></label>
   </div>
   <div class="in">
     <span class="clock" id="clock">1:30</span><span class="lbl" id="tLbl">Pause</span>
@@ -1675,9 +1674,7 @@ function tick(){const left=Math.max(0,Math.round((tEnd-Date.now())/1000));$('clo
 function restDone(){
   $('timer').classList.add('flash');beep();
   try{navigator.vibrate&&navigator.vibrate([300,120,300,120,500])}catch(e){}
-  if(document.visibilityState==='hidden'){if(typeof note==='function'&&!pushArmed)note('end')}
-  else{toast('⏰ Pause vorbei – weiter geht\'s');}
-  pushArmed=false;
+  if(document.visibilityState!=='hidden')toast('⏰ Pause vorbei – weiter geht\'s');
   wakeOff();
 }
 /* Bildschirm wach halten während der Pause (Screen Wake Lock, Android und iPhone) */
@@ -1687,9 +1684,9 @@ let wakeLk=null;
 async function wakeOnNow(){if(!wakeOn||wakeLk)return;try{wakeLk=await navigator.wakeLock.request('screen');wakeLk.addEventListener('release',()=>{wakeLk=null})}catch(e){wakeLk=null}}
 function wakeOff(){try{wakeLk&&wakeLk.release()}catch(e){}wakeLk=null}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&running()){tick();if(running())wakeOnNow()}});
-function startRest(){wakeOnNow();setTimeout(()=>{if(running())pushStart()},0);try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume()}catch(err){}
+function startRest(){wakeOnNow();try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume()}catch(err){}
   tEnd=Date.now()+rest*1000;$('timer').classList.add('run');$('timer').classList.remove('flash');$('tGo').textContent='Stopp';$('tLbl').textContent='läuft';clearInterval(tInt);tInt=setInterval(tick,250);tick()}
-function stopRest(){clearInterval(tInt);tInt=null;idle();wakeOff();pushCancel();if(typeof noteClose==='function')noteClose()}
+function stopRest(){clearInterval(tInt);tInt=null;idle();wakeOff()}
 $('tGo').addEventListener('click',()=>{running()?stopRest():startRest()});
 $('clock').addEventListener('click',()=>{if(!running())startRest()});
 function setRest(v){rest=Math.max(15,Math.min(600,v));try{localStorage.setItem(REST_KEY,String(rest))}catch(e){}renderRestSet();if(!running())idle()}
@@ -1702,48 +1699,14 @@ $('tSet').addEventListener('click',e=>{const p=e.target.closest('[data-rest]');i
   const st=e.target.closest('[data-tstep]');if(st)setRest(rest+(+st.dataset.tstep))});
 document.addEventListener('click',e=>{if(!$('tSet').hidden&&!e.target.closest('#timer'))openRestSet(false)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('tSet').hidden)openRestSet(false)});
-/* Mitteilung auf dem Sperrbildschirm während der Pause (Android; braucht die installierte App mit Service Worker) */
 let lastSet=null;
-const NOTE_KEY='ronnielogman.notify',canNotify='Notification' in window&&'serviceWorker' in navigator&&location.protocol!=='file:';
-let noteOn=false;try{noteOn=localStorage.getItem(NOTE_KEY)==='1'&&canNotify&&Notification.permission==='granted'}catch(e){}
-function nextUp(){
-  const ex=draft.exercises;if(!ex.length||type!=='kraft')return null;
-  let i=lastSet&&ex[lastSet.i]?lastSet.i:0,j=lastSet&&ex[lastSet.i]?lastSet.j+1:0;
-  if(j>=ex[i].sets.length){i++;j=0}if(i>=ex.length)return{title:'Letzter Satz geschafft',body:'Training speichern nicht vergessen'};
-  return{title:ex[i].name,body:`Satz ${j+1} von ${ex[i].sets.length}`};
-}
-const hhmm=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())+(d.getSeconds()?':'+pad(d.getSeconds()):'')};
-async function note(kind){
-  if(!noteOn)return;try{const reg=await navigator.serviceWorker.ready;const n=nextUp()||{title:'Pause',body:''};
-    if(kind==='rest')await reg.showNotification(n.title,{body:(n.body?n.body+' · ':'')+'Pause bis '+hhmm(tEnd),tag:'rest',renotify:false,silent:true,icon:'icons/icon-192.png',badge:'icons/favicon-32.png',timestamp:tEnd,data:{url:'./'}});
-    else await reg.showNotification('Pause vorbei',{body:n.title+(n.body?' · '+n.body:''),tag:'rest',renotify:true,silent:false,vibrate:[200,100,200],icon:'icons/icon-192.png',badge:'icons/favicon-32.png',data:{url:'./'}});
-  }catch(e){}}
-/* Push über Supabase: Mitteilung am Pausenende auch, wenn die App im Hintergrund ist */
-const VAPID_PUBLIC='BN5lAu635xf3ANcliFAaU6djJiPdHF6nC7EC8l1xIJtFhrvMSTdldQ7Cs6fdiWXSu6Bz2SO3g0aURnARXQbxmSI';
-const PUSH_URL='https://dzxsgsythodkjuzctunh.supabase.co/functions/v1/rest-push',PUSH_KEY='sb_publishable_jkzCvRHKnDU510Y6Ppk0hw_qGgQkXu4';
-const canPush=canNotify&&'PushManager' in window;
-let pushArmed=false;
-const deviceId=(()=>{try{let d=localStorage.getItem('ronnielogman.device');if(!d){d=(crypto.randomUUID?crypto.randomUUID():uid()+uid()).replace(/[^A-Za-z0-9_-]/g,'');localStorage.setItem('ronnielogman.device',d)}return d}catch(e){return 'tmp'+uid()}})();
-function b64u(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))}
-async function pushSub(){const reg=await navigator.serviceWorker.ready;let s=await reg.pushManager.getSubscription();
-  if(!s)s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUBLIC)});return s}
-async function pushStart(){if(!noteOn||!canPush)return;try{const s=await pushSub(),n=nextUp();
-  const r=await fetch(PUSH_URL,{method:'POST',keepalive:true,headers:{'content-type':'application/json',apikey:PUSH_KEY},
-    body:JSON.stringify({action:'start',device:deviceId,ends_at:tEnd,sub:s.toJSON(),title:'Pause vorbei',body:n?n.title+(n.body?' · '+n.body:''):'Weiter geht\'s'})});
-  pushArmed=r.ok}catch(e){pushArmed=false}}
-function pushCancel(){if(!pushArmed)return;pushArmed=false;try{fetch(PUSH_URL,{method:'POST',keepalive:true,headers:{'content-type':'application/json',apikey:PUSH_KEY},body:JSON.stringify({action:'cancel',device:deviceId})}).catch(()=>{})}catch(e){}}
-if(canNotify)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='rest-push'&&document.visibilityState==='visible')setTimeout(noteClose,4000)});
-async function noteClose(){if(!canNotify)return;try{const reg=await navigator.serviceWorker.ready;(await reg.getNotifications({tag:'rest'})).forEach(n=>n.close())}catch(e){}}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){if(running())note('rest')}else noteClose()});
-function renderNoteOpt(){$('tWakeWrap').hidden=!canWake;$('tWake').checked=wakeOn;$('tNoteWrap').hidden=!canNotify;if(!canNotify)return;$('tNotify').checked=noteOn;
-  const den=Notification.permission==='denied';$('tNotify').disabled=den;
-  $('tNoteHint').textContent=den?'Mitteilungen sind für diese App blockiert. Du kannst sie in den Einstellungen des Handys erlauben.':!canPush?'Funktioniert nur in der installierten App (über „Zum Startbildschirm hinzufügen“).':'Mitteilung mit Vibration, wenn die Pause vorbei ist, auch bei gesperrtem Handy.'}
+function renderNoteOpt(){$('tWakeWrap').hidden=!canWake;$('tWake').checked=wakeOn}
 $('tWake').addEventListener('change',e=>{wakeOn=e.target.checked;try{localStorage.setItem(WAKE_KEY,wakeOn?'1':'0')}catch(_){}if(wakeOn&&running())wakeOnNow();else if(!wakeOn)wakeOff()});
-$('tNotify').addEventListener('change',async e=>{
-  if(!e.target.checked){noteOn=false;try{localStorage.setItem(NOTE_KEY,'0')}catch(_){}noteClose();renderNoteOpt();return}
-  let p=Notification.permission;if(p==='default'){try{p=await Notification.requestPermission()}catch(_){}}
-  noteOn=p==='granted';if(noteOn&&canPush){try{await pushSub()}catch(_){toast('Push konnte nicht eingerichtet werden')}}try{localStorage.setItem(NOTE_KEY,noteOn?'1':'0')}catch(_){}renderNoteOpt();
-  toast(noteOn?'Hinweis am Pausenende ist an':'Mitteilungen wurden nicht erlaubt')});
+/* Aufräumen: frühere Mitteilungs-/Push-Einstellung entfernen */
+try{['ronnielogman.notify','ronnielogman.device'].forEach(k=>localStorage.removeItem(k))}catch(e){}
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.ready.then(async reg=>{
+  try{const s=reg.pushManager&&await reg.pushManager.getSubscription();if(s)await s.unsubscribe()}catch(e){}
+  try{(await reg.getNotifications({tag:'rest'})).forEach(n=>n.close())}catch(e){}}).catch(()=>{});
 idle();
 
 plDraft.color=freeColor();persist();setMode();
