@@ -723,6 +723,8 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .ds-body .entry:hover{border-color:var(--line)}
 .ds-stats{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .ds-edit{margin-left:auto;font-size:12.5px;padding:4px 10px}
+.ds-del{font-size:12.5px;padding:4px 10px;color:var(--del);border-color:color-mix(in srgb,var(--del) 45%,var(--line))}
+.ds-del.arm{background:var(--del);border-color:var(--del);color:#fff}
 .ds-foot{margin-top:12px}
 .ds-foot .btn{width:100%}
 .ds-empty{text-align:center;color:var(--muted);padding:18px 0 4px}
@@ -1438,14 +1440,16 @@ function renderDaySheet(){const ds=dsDate,d=parseD(ds),rel=relLabel(ds),ss=sessi
     prs=kr.reduce((a,s)=>a+s.exercises.filter(e=>prIndex(e.name,e.sets,s.date,s.id)>=0).length,0);
   const stats=kr.length>1||prs?`<div class="ds-stats">${kr.length>1?`<span class="pill"><b>${sets}</b> Sätze</span>`:''}${kr.length>1&&vol?`<span class="pill"><b>${fmt(vol,0)}</b> kg Volumen</span>`:''}${prs?`<span class="pill pr">${TROPHY}<b>${prs}</b> ${prs===1?'Rekord':'Rekorde'}</span>`:''}</div>`:'';
   $('dsBody').innerHTML=ss.length?stats+ss.map(s=>`<div class="entry" style="--c:${cssc(markerVar(s))}"><div class="bar"></div><div style="min-width:0">
-      <div class="title">${mk(s,1)}${esc(s.title)}<button class="btn small ds-edit" data-dsedit="${s.id}">Bearbeiten</button></div><div class="sum">${summary(s)}</div>
+      <div class="title">${mk(s,1)}${esc(s.title)}<button class="btn small ds-edit" data-dsedit="${s.id}">Bearbeiten</button><button class="btn small ds-del" data-dsdel="${s.id}" aria-label="${esc(s.title)} löschen">Löschen</button></div><div class="sum">${summary(s)}</div>
       ${exBlock(s)}${s.note?`<div class="snote">${esc(s.note)}</div>`:''}</div></div>`).join('')
     :`<div class="ds-empty">An diesem Tag ist nichts eingetragen.</div>`;
   $('dsGo').textContent=ss.length?'Weiteres Training eintragen':(ds>todayIso()?'Training planen':'Training eintragen');
 }
 function openDaySheet(ds){dsDate=ds;renderDaySheet();$('daySheet').hidden=false;document.body.style.overflow='hidden'}
 function closeDaySheet(){$('daySheet').hidden=true;document.body.style.overflow=''}
-$('daySheet').addEventListener('click',e=>{if(e.target.id==='daySheet')closeDaySheet();const b=e.target.closest('[data-dsedit]');if(b){const id=b.dataset.dsedit,ds=dsDate;closeDaySheet();openDay(ds);startEdit(id)}});
+$('daySheet').addEventListener('click',e=>{if(e.target.id==='daySheet')closeDaySheet();
+  const dl=e.target.closest('[data-dsdel]');if(dl){if(!dl.classList.contains('arm')){document.querySelectorAll('.ds-del.arm').forEach(x=>{x.classList.remove('arm');x.textContent='Löschen'});dl.classList.add('arm');dl.textContent='Wirklich löschen?';return}
+    const id=dl.dataset.dsdel;db.sessions=db.sessions.filter(s=>s.id!==id);if(editingId===id)cancelEdit();persist();renderDaySheet();renderAll();toast('Training gelöscht');return}const b=e.target.closest('[data-dsedit]');if(b){const id=b.dataset.dsedit,ds=dsDate;closeDaySheet();openDay(ds);startEdit(id)}});
 $('dsX').addEventListener('click',closeDaySheet);
 $('dsPrev').addEventListener('click',()=>{dsDate=addDays(dsDate,-1);renderDaySheet()});
 $('dsNext').addEventListener('click',()=>{dsDate=addDays(dsDate,1);renderDaySheet()});
