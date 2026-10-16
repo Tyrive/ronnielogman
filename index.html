@@ -2270,9 +2270,10 @@ function startPlan(id){const p=db.plans.find(x=>x.id===id);if(!p)return openTrai
   if(editingId)cancelEdit();type='kraft';selDate=todayIso();
   if(!draftActive()||draft.planId!==id){draft={title:p.name,planId:p.id,exercises:p.exercises.map(newEx)};applyPlanSS(p.id);swapIdx=null;confirmDel=null;wkClear()}
   setPicker(false);wkBegin();switchTab('train')}
+/* Vorschlag: der Plan, der am längsten nicht mehr dran war (nie trainierte Pläne zuerst, bei Gleichstand Reihenfolge der Bibliothek) */
 function nextPlan(){const ps=db.plans.filter(p=>p.exercises.length);if(!ps.length)return db.plans[0]||null;
-  const last=db.sessions.filter(s=>s.type==='kraft'&&ps.some(p=>p.id===s.planId)).sort((a,b)=>b.date.localeCompare(a.date))[0];
-  if(!last)return ps[0];const i=ps.findIndex(p=>p.id===last.planId);return ps[(i+1)%ps.length]}
+  const lastOf=id=>db.sessions.reduce((m,s)=>s.type==='kraft'&&s.planId===id&&s.date>m?s.date:m,'');
+  return ps.map((p,i)=>({p,i,d:lastOf(p.id)})).sort((a,b)=>a.d.localeCompare(b.d)||a.i-b.i)[0].p}
 function weekStats(from,to){const ss=db.sessions.filter(s=>s.type==='kraft'&&s.date>=from&&s.date<=to);let sets=0,reps=0,vol=0,dur=0;
   ss.forEach(s=>{dur+=s.dur||0;s.exercises.forEach(e=>e.sets.forEach(x=>{const r=num(x.r);if(r>0){if(!x.dr)sets++;reps+=r;vol+=num(x.w)*r}}))});
   return{n:ss.length,days:new Set(ss.map(s=>s.date)).size,sets,reps,vol,dur}}
