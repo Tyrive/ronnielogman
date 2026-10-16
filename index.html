@@ -272,6 +272,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .wrest{margin-left:auto;margin-right:8px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 12.5px var(--mono);padding:4px 10px;cursor:pointer}
 .wchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:2px 16px}
 .wchips::-webkit-scrollbar{display:none}
+.wchips{cursor:grab;touch-action:pan-x;-webkit-user-select:none;user-select:none;scroll-behavior:auto;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 28px),transparent)}
+.wchips.drag{cursor:grabbing}
+.wchips.drag button{pointer-events:none}
 .wchips button{flex:none;display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 13px var(--body);cursor:pointer;white-space:nowrap;transition:border-color .25s,background .25s}
 .wchips .done{background:var(--surface2);color:var(--muted);border-color:transparent}
 .wchips .done svg{color:var(--ok)}
@@ -2240,7 +2243,14 @@ function renderWTop(){if(!$('wTitle'))return;
 function updWSub(){const el=$('wSub');if(!el)return;
   el.textContent=editingId?shortDay(selDate):wkStart?hms((Date.now()-wkStart)/1000):selDate!==todayIso()?shortDay(selDate):(draft.title?'bereit':'Plan wählen')}
 setInterval(()=>{if(tab==='train')updWSub();if(tab==='home'&&draftActive()){const t=$('hRunT');if(t&&wkStart)t.textContent=hms((Date.now()-wkStart)/1000)}},1000);
-$('wChips').addEventListener('click',e=>{const b=e.target.closest('[data-wc]');if(!b)return;const c=$('exc'+b.dataset.wc);if(c){const y=c.getBoundingClientRect().top+window.scrollY-150;window.scrollTo({top:y,behavior:SMOOTH()})}});
+/* Übungsleiste mit Maus oder Finger ziehen */
+(()=>{const box=$('wChips');let x0=0,s0=0,id=null,moved=false;
+  box.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;id=e.pointerId;x0=e.clientX;s0=box.scrollLeft;moved=false});
+  box.addEventListener('pointermove',e=>{if(e.pointerId!==id)return;const dx=e.clientX-x0;if(!moved&&Math.abs(dx)>5){moved=true;box.classList.add('drag');try{box.setPointerCapture(id)}catch(_){}}if(moved)box.scrollLeft=s0-dx});
+  const end=e=>{if(e.pointerId!==id)return;id=null;if(moved){box.classList.remove('drag');box.dataset.nc='1';setTimeout(()=>delete box.dataset.nc,50)}};
+  box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
+  box.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)>Math.abs(e.deltaX)&&box.scrollWidth>box.clientWidth){box.scrollLeft+=e.deltaY;e.preventDefault()}},{passive:false})})();
+$('wChips').addEventListener('click',e=>{if($('wChips').dataset.nc)return;const b=e.target.closest('[data-wc]');if(!b)return;const c=$('exc'+b.dataset.wc);if(c){const y=c.getBoundingClientRect().top+window.scrollY-150;window.scrollTo({top:y,behavior:SMOOTH()})}});
 $('wRest').addEventListener('click',()=>showRest(true));
 $('wGo').addEventListener('click',()=>{const n=nextSet();if(!n){finishWorkout();return}
   if(!$('saveAsk').hidden)hideAsk();
@@ -2307,7 +2317,7 @@ function renderHome(){
       $('hNext').style.setProperty('--c',np.color);
       $('hNext').innerHTML=`<div class="hrow"><span class="klabel"><span class="dot"></span>Als Nächstes</span><button class="linkbtn" data-h="other">Anderer Plan</button></div>
         <div class="hrow"><span class="pn">${esc(np.name)}</span><span class="meta">${last?'zuletzt '+shortDay(last.date)+(last.dur?' · '+durTxt(last.dur):''):'noch nie trainiert'}</span></div>
-        <div class="xchips">${np.exercises.slice(0,5).map(n=>`<span>${esc(n)}</span>`).join('')}${np.exercises.length>5?`<span>+${np.exercises.length-5}</span>`:''}</div>
+        <div class="xchips">${np.exercises.map(n=>`<span>${esc(n)}</span>`).join('')}</div>
         <button class="bigstart" data-h="start" data-plan="${np.id}"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>Training starten</button>`}
     else $('hNext').innerHTML=`<span class="klabel">Noch kein Plan</span><p style="margin:0">Leg deinen ersten Trainingsplan an oder starte ein freies Training.</p><button class="bigstart" data-h="other">Training starten</button>`}
   // Woche
