@@ -259,7 +259,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .hlink .mfig svg{width:34px}
 .hlink .ldot{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}
 /* Training-Modus */
-.wtop{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:8px;margin:-14px -16px 0;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:var(--bg)}
+.wtop{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:8px;margin:-14px -16px 0;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 18px;background:linear-gradient(var(--bg) 72%,color-mix(in srgb,var(--bg) 0%,transparent))}
+html:has(.app[data-tab="train"]) body{background:var(--bg)}
+html{background:var(--bg)}
+body{min-height:100vh;min-height:100dvh;background-repeat:no-repeat!important}
 .wmin{width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
 .wtt{display:flex;flex-direction:column;align-items:center;line-height:1.15;min-width:0}
 .wtt b{display:flex;align-items:center;gap:7px;font:700 22px var(--display);text-transform:uppercase;letter-spacing:.04em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -981,8 +984,9 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       <button class="grow" data-sub="ex" data-focus="ex"><span class="gico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="gl">Übungen</span><span class="gv" id="meExN"></span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
     </div></div>
     <div class="grp"><h3>Training</h3><div class="glist">
-      <div class="grow col"><div class="growr"><span>Pausenzeit</span><div class="gstep rstep"><button data-rstep="-15" aria-label="15 Sekunden weniger">−15 s</button><b id="meRest" aria-live="polite"></b><button data-rstep="15" aria-label="15 Sekunden mehr">+15 s</button></div></div><div class="chips" id="meRestChips"></div></div>
-      <label class="grow"><span class="gl">Ton und Vibration am Pausenende<small>Klappt nur, solange die App geöffnet ist</small></span><input type="checkbox" class="tgl" id="meSig"></label>
+      <label class="grow"><span class="gl">Pausen-Timer zwischen den Sätzen<small>Startet nach jedem abgehakten Satz</small></span><input type="checkbox" class="tgl" id="meAuto"></label>
+      <div class="grow col" id="meRestRow"><div class="growr"><span>Pausenzeit</span><div class="gstep rstep"><button data-rstep="-15" aria-label="15 Sekunden weniger">−15 s</button><b id="meRest" aria-live="polite"></b><button data-rstep="15" aria-label="15 Sekunden mehr">+15 s</button></div></div><div class="chips" id="meRestChips"></div></div>
+      <label class="grow" id="meSigRow"><span class="gl">Ton und Vibration am Pausenende<small>Klappt nur, solange die App geöffnet ist</small></span><input type="checkbox" class="tgl" id="meSig"></label>
       <label class="grow"><span class="gl">Wochenziel<small>Ziel und Serie auf der Startseite</small></span><input type="checkbox" class="tgl" id="meGoalOn"></label>
       <div class="grow" id="meGoalRow" style="cursor:default"><span class="gl">Trainings pro Woche</span><div class="gstep"><button data-goal="-1" aria-label="Weniger">−</button><b id="meGoal"></b><button data-goal="1" aria-label="Mehr">+</button></div></div>
     </div></div>
@@ -2103,7 +2107,7 @@ document.getElementById('impSeg').addEventListener('click',e=>{const b=e.target.
   document.getElementById('impFn').hidden=k!=='fn';document.getElementById('impRc').hidden=k!=='rc'});
 
 /* Reiter */
-function setMode(){if(tab==='train'||tab==='home')document.documentElement.dataset.mode='gym';else delete document.documentElement.dataset.mode}
+function setMode(){if(tab==='home')document.documentElement.dataset.mode='gym';else delete document.documentElement.dataset.mode}
 function streak(){const days=new Set(db.sessions.map(s=>s.date));let d=todayIso();if(!days.has(d))d=addDays(d,-1);let n=0;while(days.has(d)){n++;d=addDays(d,-1)}return n}
 const TABS=['home','cal','train','ex','prog','data','me'],NAV_OF={home:'home',cal:'cal',prog:'prog',me:'me',ex:'me',data:'me'};
 function switchTab(t){if(t==='train'&&tab!=='train')retTab=tab;const changed=t!==tab;tab=t;setMode();$('app').dataset.tab=t;
@@ -2187,6 +2191,7 @@ idle();
 plDraft.color=freeColor();persist();setMode();
 /* ===== Neuer Aufbau: Heute, Training-Modus, Pause, Profil ===== */
 let restTotal=90;
+const AUTO_KEY='ronnielogman.autorest';let autoRest=true;try{autoRest=localStorage.getItem(AUTO_KEY)!=='0'}catch(e){}
 const RING=753.98;
 function showRest(o){const ov=$('restOv');if(o&&!running())return;ov.hidden=!o;document.documentElement.classList.toggle('lock',!!o);if(o)renderRest();renderWTop()}
 function restLeft(){return Math.max(0,Math.round((tEnd-Date.now())/1000))}
@@ -2206,7 +2211,7 @@ function renderRest(){
   $('roPr').hidden=!prTxt;if(prTxt)$('roPr').innerHTML=prTxt;
   const p=db.plans.find(x=>x.id===draft.planId),c=wCounts();
   $('roMin').style.setProperty('--c',p?p.color:FREE_COLOR);
-  $('roMin').innerHTML=`<i></i><b>${esc(draft.title||'Training')}</b><small>${wkStart?hms((Date.now()-wkStart)/1000)+' · ':''}${c.done}/${c.tot}</small><em>Zum Training ⌃</em>`;
+  $('roMin').innerHTML=`<i></i><b>${esc(draft.title||'Training')}</b><small>${wkStart?hms((Date.now()-wkStart)/1000)+' · ':''}${c.done}/${c.tot}</small><em>Zum Training</em>`;
 }
 $('restOv').addEventListener('click',e=>{const b=e.target.closest('[data-ro]');if(!b)return;const k=b.dataset.ro;
   if(k==='skip'){stopRest();return}
@@ -2259,7 +2264,7 @@ $('wGo').addEventListener('click',()=>{const n=nextSet();if(!n){finishWorkout();
   const sameRound=nn&&n.grp.length>1&&n.grp.includes(nn.i)&&nn.j===n.j&&nn.i!==n.i;
   const dropNext=nn&&nn.i===n.i&&A[nn.i].sets[nn.j].dr;
   try{navigator.vibrate&&navigator.vibrate(25)}catch(_){}
-  if(nn&&!sameRound&&!dropNext){startRest();showRest(true)}
+  if(nn&&!sameRound&&!dropNext&&autoRest){startRest();showRest(true)}
   else if(!nn)toast('Alle Sätze geschafft 💪');
   if(nn){const c=$('exc'+nn.i);if(c&&nn.i!==n.i){const y=c.getBoundingClientRect().top+window.scrollY-150;window.scrollTo({top:y,behavior:SMOOTH()})}}
   renderWTop()});
@@ -2379,6 +2384,7 @@ function renderMe(){const mail=($('acMail')&&$('acMail').textContent||'').trim()
   $('meExN').textContent=LIB.filter(x=>!isHidden(x.n)).length+db.custom.filter(c=>!c.of).length;
   $('meRest').textContent=mmss(rest);
   $('meRestChips').innerHTML=REST_PRESETS.map(v=>`<button class="chip${v===rest?' on':''}" data-rest="${v}">${v<60?v+' s':mmss(v)}</button>`).join('');
+  $('meAuto').checked=autoRest;$('meRestRow').hidden=!autoRest;$('meSigRow').hidden=!autoRest;
   $('meSig').checked=sigOn;$('meGoal').textContent=(db.goals.kraft||4)+' pro Woche';$('meGoalOn').checked=!db.goals.off;$('meGoalRow').hidden=!!db.goals.off;
   renderData()}
 $('tab-me').addEventListener('click',e=>{const r=e.target.closest('[data-rest]');if(r){setRest(+r.dataset.rest);renderMe();return}
@@ -2388,6 +2394,7 @@ $('tab-me').addEventListener('click',e=>{const r=e.target.closest('[data-rest]')
   if(sb.dataset.sub==='ex'){const b=document.querySelector(`#exSub [data-sub="${f}"]`);if(b)b.click()}
   else{const cards=[...document.querySelectorAll('#tab-data>.card')];const want={acc:'Konto',imp:'Daten importieren',bak:'Backup'}[f];const c=cards.find(x=>{const h=x.querySelector('h2');return h&&h.textContent.trim()===want});
     if(c&&f!=='acc')setTimeout(()=>{const y=c.getBoundingClientRect().top+window.scrollY-16;window.scrollTo({top:y,behavior:SMOOTH()})},60)}});
+$('meAuto').addEventListener('change',e=>{autoRest=e.target.checked;try{localStorage.setItem(AUTO_KEY,autoRest?'1':'0')}catch(_){}if(!autoRest&&running())stopRest();renderMe()});
 $('meGoalOn').addEventListener('change',e=>{if(e.target.checked)delete db.goals.off;else db.goals.off=true;persist();renderMe()});
 $('meSig').addEventListener('change',e=>{sigOn=e.target.checked;try{localStorage.setItem(SIG_KEY,sigOn?'1':'0')}catch(_){}if($('tSig'))$('tSig').checked=sigOn});
 
