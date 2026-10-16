@@ -193,7 +193,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 @keyframes finRing{from{transform:scale(.8);opacity:1}to{transform:scale(1.6);opacity:0}}
 @media (prefers-reduced-motion:reduce){.fin-in>*,.fin-badge::after{animation:none}}
 .tabs,.week,header.brand,.modebar,.daybox,#timer{display:none!important}
-.app[data-tab="train"]{padding-bottom:140px}
+.app[data-tab="train"]{padding-bottom:200px}
 .ptitle{margin:6px 0 0;font:700 34px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;color:var(--ink)}
 .klabel{font:700 11px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
 .klabel .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
@@ -272,7 +272,11 @@ body{min-height:100vh;min-height:100dvh;background-repeat:no-repeat!important}
 .wprog{display:flex;flex-direction:column;gap:6px}
 .wpl{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);gap:8px}
 .wpl #wCnt{font-family:var(--mono);color:var(--ink)}
-.wrest{margin-left:auto;margin-right:8px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 12.5px var(--mono);padding:4px 10px;cursor:pointer}
+.wrest{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));width:min(528px,calc(100% - 32px));height:52px;z-index:31;display:flex;align-items:center;gap:12px;padding:0 16px;box-sizing:border-box;border:1.5px solid var(--accent);border-radius:16px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.35);animation:finUp .3s cubic-bezier(.2,.8,.2,1)}
+.wrest .wl{font:700 11px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.wrest b{font:700 26px/1 var(--display);font-variant-numeric:tabular-nums;color:var(--accent)}
+.wrest em{margin-left:auto;font-style:normal;font-weight:600;font-size:13px;color:var(--accent)}
+.wrest .wf{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);transition:width .3s linear}
 .wchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:2px 16px}
 .wchips::-webkit-scrollbar{display:none}
 .wchips{cursor:grab;touch-action:pan-x;-webkit-user-select:none;user-select:none;scroll-behavior:auto;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 28px),transparent)}
@@ -2197,7 +2201,7 @@ function showRest(o){const ov=$('restOv');if(o&&!running())return;ov.hidden=!o;d
 function restLeft(){return Math.max(0,Math.round((tEnd-Date.now())/1000))}
 function renderRest(){
   const ov=$('restOv');
-  const wr=$('wRest');if(wr){const show=running()&&ov.hidden&&tab==='train';wr.hidden=!show;if(show)wr.innerHTML=`⏱ ${mmss(restLeft())}`}
+  const wr=$('wRest');if(wr){const show=running()&&ov.hidden&&tab==='train';wr.hidden=!show;if(show){const l=restLeft();wr.innerHTML=`<span class="wl">Pause</span><b>${mmss(l)}</b><em>Pause öffnen</em><span class="wf" style="width:${Math.round(l/Math.max(restTotal,l,1)*100)}%"></span>`}}
   if(ov.hidden||ov.classList.contains('done'))return;
   const left=restLeft(),tot=Math.max(restTotal,left,1);
   $('roTime').textContent=mmss(left);$('roOf').textContent='von '+mmss(tot);
