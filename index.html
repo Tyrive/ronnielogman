@@ -164,7 +164,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 :root[data-theme="light"] .timer{box-shadow:0 10px 28px rgba(60,40,20,.16),0 0 0 1px rgba(0,0,0,.04)}
 :root[data-theme="light"] .dsheet{background:rgba(30,20,10,.35)}
 :root[data-theme="light"] .exi{box-shadow:0 0 0 1px var(--line)}
-:root[data-theme="light"] .pill.pr,:root[data-theme="light"] .pill.pr b,:root[data-theme="light"] .fin-pr,:root[data-theme="light"] .fin-pr div b,:root[data-theme="light"] .sets .n.pr,:root[data-theme="light"] .pr-mini{color:#B26B00;border-color:#E0A33A}
+:root[data-theme="light"] .lpr,:root[data-theme="light"] .pill.pr,:root[data-theme="light"] .pill.pr b,:root[data-theme="light"] .fin-pr,:root[data-theme="light"] .fin-pr div b,:root[data-theme="light"] .sets .n.pr,:root[data-theme="light"] .pr-mini{color:#B26B00;border-color:#E0A33A}
 .themeseg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .themeseg button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:600 13px var(--body);cursor:pointer}
 .themeseg button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
@@ -361,6 +361,28 @@ body{min-height:100vh;min-height:100dvh;background-repeat:no-repeat!important}
 .seg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
 .seg3 button{height:36px;border-radius:9px;border:0;background:none;color:var(--muted);font:600 13.5px var(--body);cursor:pointer;transition:background .25s,color .25s}
 .seg3 button.on{background:var(--accent);color:var(--accent-ink)}
+.seg2{grid-template-columns:repeat(2,minmax(0,1fr));width:200px;flex:none}
+.seg2 button{height:32px;font-size:13px}
+.lweek{display:flex;flex-direction:column;gap:8px}
+.lwh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px 4px 0}
+.lwh b{font:700 18px var(--display);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.lwh b small{font:500 12px var(--body);color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
+.lwh span{font:500 12px var(--mono);color:var(--muted);text-align:right;white-space:nowrap}
+.lrow{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,transform .15s}
+.lrow:hover{border-color:var(--c)}
+.lrow:active{transform:scale(.99)}
+.ldate{display:flex;flex-direction:column;align-items:center;justify-content:center;height:46px;border-radius:12px;background:color-mix(in srgb,var(--c) 18%,var(--surface2));line-height:1}
+.ldate small{font:700 10px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ldate b{font:700 20px var(--display);color:var(--ink);margin-top:2px}
+.lmain{min-width:0;display:flex;flex-direction:column;gap:2px}
+.lmain .lt{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px}
+.lmain .lt i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.lmain .ls{font:500 12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lmain .lx{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lpr{display:inline-flex;align-items:center;gap:3px;font:600 12px var(--mono);color:#F5B83D;border:1px solid #F5B83D;border-radius:999px;padding:2px 8px}
+.lpr svg{width:12px;height:12px}
+.lempty{padding:4px;color:var(--muted);font-size:13px}
+.lmore{align-self:center}
 .numgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .num{background:var(--surface2);border-radius:12px;padding:10px 10px 9px}
 .num b{display:block;font:700 26px/1.05 var(--display);font-variant-numeric:tabular-nums}
@@ -795,8 +817,9 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   </section>
   <!-- KALENDER -->
   <section class="panel" id="tab-cal" hidden>
-    <h1 class="ptitle">Verlauf</h1>
-    <div class="card">
+    <div class="hrow"><h1 class="ptitle">Verlauf</h1><div class="seg3 seg2" id="calSeg" role="tablist"><button data-cv="cal" class="on" role="tab">Kalender</button><button data-cv="list" role="tab">Liste</button></div></div>
+    <div id="calList" class="panel" hidden></div>
+    <div class="card" data-cv-pane="cal">
       <div class="calnav"><button class="btn" id="calPrev" aria-label="Vorheriger Monat">‹</button><button class="caltitle" id="calTitle" aria-expanded="false" aria-controls="ymPick"></button><button class="btn" id="calNext" aria-label="Nächster Monat">›</button></div>
       <div class="ympick" id="ymPick" hidden>
         <div class="ynav"><button class="btn" id="yPrev" aria-label="Vorheriges Jahr">‹</button><b id="yTitle"></b><button class="btn" id="yNext" aria-label="Nächstes Jahr">›</button></div>
@@ -806,8 +829,8 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       <div class="cal" id="cal"></div>
       <div class="muted calhint">Tippe auf einen Tag für die Übersicht.</div>
     </div>
-    <div class="card"><h2 id="calStatsTitle">Dieser Monat</h2><div class="stats" id="calStats"></div></div>
-    <div class="card"><h2>Legende</h2><div class="legend" id="legend"></div></div>
+    <div class="card" data-cv-pane="cal"><h2 id="calStatsTitle">Dieser Monat</h2><div class="stats" id="calStats"></div></div>
+    <div class="card" data-cv-pane="cal"><h2>Legende</h2><div class="legend" id="legend"></div></div>
   </section>
 
   <!-- TRAINING -->
@@ -1390,7 +1413,33 @@ $('week').addEventListener('click',e=>{const g=e.target.closest('[data-wkgo]');c
 $('week').addEventListener('scroll',()=>{const wk=$('week');if(wk.scrollLeft<20&&weeksBack<260){weeksBack+=26;renderHead()}},{passive:true});
 
 /* Kalender */
-function renderCal(){renderLegend();
+let calView='cal';try{calView=localStorage.getItem('ronnielogman.calview')==='list'?'list':'cal'}catch(e){}
+let listWeeks=8;
+$('calSeg').addEventListener('click',e=>{const b=e.target.closest('[data-cv]');if(!b)return;calView=b.dataset.cv;try{localStorage.setItem('ronnielogman.calview',calView)}catch(_){}renderCal()});
+function lsum(s){if(s.type!=='kraft')return summary(s);const sets=s.exercises.reduce((a,e)=>a+e.sets.filter(x=>!x.dr).length,0),vol=s.exercises.reduce((a,e)=>a+e.sets.reduce((b,x)=>b+num(x.w)*num(x.r),0),0);
+  return`${sets} Sätze${vol?' · '+fmt(vol,0)+' kg':''}${s.dur?' · '+durTxt(s.dur):''}`}
+function renderCalList(){const out=[],t=todayIso();let mon=monday(new Date());
+  const all=db.sessions.slice().sort((a,b)=>b.date.localeCompare(a.date)||byType(a,b));const oldest=all.length?all[all.length-1].date:t;
+  let shown=0;
+  for(let w=0;w<listWeeks;w++){const from=iso(mon),to=addDays(from,6),ss=all.filter(s=>s.date>=from&&s.date<=to);
+    const ws=weekStats(from,to),kw=isoWeek(mon),sun=parseD(to);
+    const rng=`${mon.getDate()}.${mon.getMonth()!==sun.getMonth()?(mon.getMonth()+1)+'.':''}–${sun.getDate()}.${sun.getMonth()+1}.`;
+    const head=`<div class="lwh"><b>${w===0?'Diese Woche':w===1?'Letzte Woche':'KW '+kw}<small>${rng}</small></b><span>${ss.length?`${ss.length}× · ${ws.vol?fmt(ws.vol,0)+' kg':''}`.replace(/ · $/,''):''}</span></div>`;
+    const rows=ss.map(s=>{const d=parseD(s.date),c=cssc(markerVar(s));
+      const prs=s.type==='kraft'?s.exercises.filter(e=>prIndex(e.name,e.sets,s.date,s.id)>=0).length:0;
+      const ex=s.type==='kraft'?s.exercises.map(e=>e.name).join(' · '):'';
+      return`<button class="lrow" data-ldate="${s.date}" style="--c:${c}"><span class="ldate"><small>${WD[(d.getDay()+6)%7]}</small><b>${d.getDate()}</b></span><span class="lmain"><span class="lt"><i></i>${esc(s.title)}${s.example?' <small class="muted">· Beispiel</small>':''}</span><span class="ls">${lsum(s)}</span>${ex?`<span class="lx">${esc(ex)}</span>`:''}</span>${prs?`<span class="lpr">${TROPHY}${prs}</span>`:CHEV_SVG}</button>`}).join('');
+    shown+=ss.length;
+    out.push(`<div class="lweek">${head}${rows||`<div class="lempty">${w===0&&t>=from?'Diese Woche noch nichts eingetragen.':'Kein Training in dieser Woche.'}</div>`}</div>`);
+    mon.setDate(mon.getDate()-7)}
+  const more=iso(mon)>oldest?'':`<button class="btn lmore" id="lMore">Ältere Wochen laden</button>`;
+  $('calList').innerHTML=all.length?out.join('')+more:'<div class="card muted">Noch keine Trainings eingetragen.</div>'}
+$('calList').addEventListener('click',e=>{if(e.target.id==='lMore'){listWeeks+=8;renderCalList();return}const r=e.target.closest('[data-ldate]');if(r)openDaySheet(r.dataset.ldate)});
+function renderCal(){
+  document.querySelectorAll('#calSeg [data-cv]').forEach(b=>{const on=b.dataset.cv===calView;b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on))});
+  document.querySelectorAll('#tab-cal [data-cv-pane]').forEach(c=>c.hidden=calView!=='cal');$('calList').hidden=calView!=='list';
+  if(calView==='list'){renderCalList();return}
+  renderLegend();
   const y=calMonth.getFullYear(),m=calMonth.getMonth();
   $('calTitle').textContent=calMonth.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
   const now=new Date();$('calToday').hidden=y===now.getFullYear()&&m===now.getMonth();
