@@ -242,9 +242,17 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 @keyframes mglow{50%{filter:brightness(1.35) drop-shadow(0 0 6px var(--h5))}}
 .mbar.on b{animation:prpop .4s}
 /* Kleinigkeiten */
+.srow.pop .n:not(.pr){animation:nfill .45s cubic-bezier(.3,1.6,.5,1);background:linear-gradient(var(--accent),var(--accent)) bottom/100% 100% no-repeat}
+@keyframes nfill{0%{background-size:100% 0;transform:scale(.8)}60%{transform:scale(1.25)}100%{background-size:100% 100%;transform:scale(1)}}
+.srow{position:relative}
+.srow.pop::after{content:"";position:absolute;inset:0;border-radius:12px;box-shadow:0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 55%,transparent);opacity:0;animation:rflash .6s ease-out;pointer-events:none}
+@keyframes rflash{25%{opacity:1}100%{opacity:0}}
+.srow.pop .n:not(.pr)::after{content:"";position:absolute;width:24px;height:24px;border-radius:50%;border:2px solid var(--accent);animation:nring .55s ease-out forwards;pointer-events:none}
+@keyframes nring{from{transform:scale(1);opacity:.9}to{transform:scale(2.2);opacity:0}}
+.confetti{position:fixed;width:7px;height:11px;border-radius:2px;pointer-events:none;z-index:120}
 .shake{animation:shake .4s cubic-bezier(.36,.07,.19,.97)}
 @keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
-@media (prefers-reduced-motion:reduce){.panel.enter,.hdays i,.mfig [data-m].rise,.mfig [data-m].on,.shake,.hlogo.spin,.bind{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion:reduce){.srow.pop .n,.srow.pop::after,.srow.pop .n::after,.panel.enter,.hdays i,.mfig [data-m].rise,.mfig [data-m].on,.shake,.hlogo.spin,.bind{animation:none!important;transition:none!important}}
 @keyframes penter{from{opacity:0;transform:translateY(10px)}}
 /* Heute */
 .htop{display:flex;align-items:center;gap:8px}
@@ -1671,7 +1679,12 @@ $('nxSave').addEventListener('click',()=>{const n=$('nxName').value.trim().repla
   closeNewEx();$('libQ').value='';pickEx(ex?ex.n:n);if(!ex)toast(n+' in der Bibliothek gespeichert')});
 
 const draftDate=()=>{const o=editingId&&db.sessions.find(x=>x.id===editingId);return o?o.date:selDate};
-function markDone(i,j,on){const x=draft.exercises[i]&&draft.exercises[i].sets[j];if(!x)return;x._d=on?1:0;const r=$('sr'+i+'_'+j);if(r)r.classList.toggle('done',!!on);const n=$('n'+i+'_'+j);if(n)n.setAttribute('aria-pressed',on?'true':'false');if(typeof saveDraftSoon==='function')saveDraftSoon();if(typeof renderWTop==='function')renderWTop()}
+function confetti(el){if(!el||matchMedia('(prefers-reduced-motion:reduce)').matches)return;const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,C=['#F5B83D','#FFD76A','#FC7102','#FFFFFF','#FF9A3C'];
+  for(let k=0;k<26;k++){const c=document.createElement('i');c.className='confetti';c.style.left=cx+'px';c.style.top=cy+'px';c.style.background=C[k%C.length];document.body.appendChild(c);
+    const a=Math.random()*Math.PI*2,d=60+Math.random()*90,dx=Math.cos(a)*d,dy=Math.sin(a)*d-50,rot=(Math.random()*720-360)|0;
+    c.animate([{transform:'translate(-50%,-50%) rotate(0)',opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,opacity:1,offset:.6},{transform:`translate(${dx*1.15}px,${dy+90}px) rotate(${rot*1.4}deg)`,opacity:0}],{duration:1000+Math.random()*400,easing:'cubic-bezier(.2,.7,.4,1)'}).onfinish=()=>c.remove()}}
+function markDone(i,j,on){const x=draft.exercises[i]&&draft.exercises[i].sets[j];if(!x)return;const was=!!x._d;x._d=on?1:0;const r=$('sr'+i+'_'+j);if(r){r.classList.toggle('done',!!on);if(on&&!was){r.classList.remove('pop');void r.offsetWidth;r.classList.add('pop');setTimeout(()=>r.classList.remove('pop'),700);
+    const e=draft.exercises[i];if(prIndex(e.name,e.sets,draftDate(),editingId)===j){setTimeout(()=>{confetti($('n'+i+'_'+j));toast('🏆 Neuer Rekord: '+e.name)},120)}}}const n=$('n'+i+'_'+j);if(n)n.setAttribute('aria-pressed',on?'true':'false');if(typeof saveDraftSoon==='function')saveDraftSoon();if(typeof renderWTop==='function')renderWTop()}
 function updPR(i){const e=draft.exercises[i];if(!e)return;const pr=prIndex(e.name,e.sets,draftDate(),editingId);
   e.sets.forEach((x,j)=>{const c=$('n'+i+'_'+j);if(!c)return;const on=j===pr;if(on===c.classList.contains('pr'))return;
     c.classList.toggle('pr',on);c.innerHTML=on?TROPHY:setNo(e.sets,j);c.title=on?'Neues Maximalgewicht':'';c.setAttribute('aria-label',on?`Satz ${j+1}: neues Maximalgewicht`:`Satz ${j+1}`);
