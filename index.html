@@ -268,6 +268,9 @@ body{min-height:100vh;min-height:100dvh;background-repeat:no-repeat!important}
 .wtt b{display:flex;align-items:center;gap:7px;font:700 22px var(--display);text-transform:uppercase;letter-spacing:.04em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wtt b i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
 .wtt span{font:500 13px var(--mono);color:var(--accent)}
+.wtt span.wclock{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:3px 11px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:600 14px var(--mono);font-variant-numeric:tabular-nums;cursor:pointer}
+.wtt span.wclock svg{width:14px;height:14px;flex:none}
+#wkChip{display:none!important}
 .wend{height:40px;padding:0 14px;border-radius:999px;background:var(--ink);color:var(--bg);border:0;font:600 14px var(--body);cursor:pointer}
 .wprog{display:flex;flex-direction:column;gap:6px}
 .wpl{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);gap:8px}
@@ -2305,8 +2308,10 @@ function renderWTop(){if(!$('wTitle'))return;
     else{g.classList.add('wfin');g.innerHTML='<span>Training beenden</span><small>Alle Sätze geschafft – speichern</small>'}}
   renderRest();
 }
-function updWSub(){const el=$('wSub');if(!el)return;
-  el.textContent=editingId?shortDay(selDate):wkStart?hms((Date.now()-wkStart)/1000):selDate!==todayIso()?shortDay(selDate):(draft.title?'bereit':'Plan wählen')}
+function updWSub(){const el=$('wSub');if(!el)return;const run=!!wkStart&&!editingId;
+  el.classList.toggle('wclock',run);
+  if(run)el.innerHTML=WK_CLOCK+hms((Date.now()-wkStart)/1000);
+  else el.textContent=editingId?shortDay(selDate):selDate!==todayIso()?shortDay(selDate):(draft.title?'bereit':'Plan wählen')}
 setInterval(()=>{if(tab==='train')updWSub();if(tab==='home'&&draftActive()){const t=$('hRunT');if(t&&wkStart)t.textContent=hms((Date.now()-wkStart)/1000)}},1000);
 /* Übungsleiste mit Maus oder Finger ziehen */
 (()=>{const box=$('wChips');let x0=0,s0=0,id=null,moved=false;
@@ -2315,6 +2320,7 @@ setInterval(()=>{if(tab==='train')updWSub();if(tab==='home'&&draftActive()){cons
   const end=e=>{if(e.pointerId!==id)return;id=null;if(moved){box.classList.remove('drag');box.dataset.nc='1';setTimeout(()=>delete box.dataset.nc,50)}};
   box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
   box.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)>Math.abs(e.deltaX)&&box.scrollWidth>box.clientWidth){box.scrollLeft+=e.deltaY;e.preventDefault()}},{passive:false})})();
+$('wSub').addEventListener('click',()=>{if(editingId)return;if(wkStart)$('wkAsk').hidden=!$('wkAsk').hidden;else if(draft.exercises.length){wkBegin();updWSub()}});
 $('wChips').addEventListener('click',e=>{if($('wChips').dataset.nc)return;const b=e.target.closest('[data-wc]');if(!b)return;const c=$('exc'+b.dataset.wc);if(c){const y=c.getBoundingClientRect().top+window.scrollY-150;window.scrollTo({top:y,behavior:SMOOTH()})}});
 $('wRest').addEventListener('click',()=>showRest(true));
 $('wGo').addEventListener('click',()=>{const n=nextSet();if(!n){finishWorkout();return}
