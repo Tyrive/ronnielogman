@@ -2275,7 +2275,7 @@ function renderRest(){
 }
 $('restOv').addEventListener('click',e=>{const b=e.target.closest('[data-ro]');if(!b)return;const k=b.dataset.ro;
   if(k==='skip'){stopRest();return}
-  const d=+k;tEnd+=d*1000;if(d>0)restTotal+=d;if(tEnd<=Date.now()){stopRest();return}tick()});
+  const d=+k;tEnd+=d*1000;restTotal=Math.max(1,restTotal+d);if(tEnd<=Date.now()){stopRest();return}tick()});
 $('roMin').addEventListener('click',()=>showRest(false));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('restOv').hidden)showRest(false)});
 
