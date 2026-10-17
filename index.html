@@ -2461,8 +2461,7 @@ function renderHome(){
   const logo=document.querySelector('.logo');if(logo&&!$('hLogo').src)$('hLogo').src=logo.src;
   const now=new Date();$('hKw').textContent='KW '+isoWeek(now);
   const mail=($('acMail')&&$('acMail').textContent||'').trim();$('hAv').textContent=mail?mail[0].toUpperCase():'R';
-  const hr=now.getHours(),dt=hr<5?['Späte Session','#8B6CFF']:hr<11?['Guten Morgen','#FFB23F']:hr<14?['Mahlzeit','var(--accent)']:hr<18?['Schönen Nachmittag','var(--accent)']:hr<22?['Guten Abend','#FF4A2B']:['Späte Session','#8B6CFF'];
-  document.documentElement.style.setProperty('--glow',dt[1]);
+  const hr=now.getHours(),dt=[hr<5?'Späte Session':hr<11?'Guten Morgen':hr<14?'Mahlzeit':hr<18?'Schönen Nachmittag':hr<22?'Guten Abend':'Späte Session'];
   $('hDate').textContent=dt[0]+' · '+now.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
   const np=nextPlan(),act=draftActive(),t=todayIso(),todayK=db.sessions.filter(s=>s.type==='kraft'&&s.date===t);
   if(act){const p=db.plans.find(x=>x.id===draft.planId);$('hTitle').innerHTML=`Weiter mit <span style="color:${p?p.color:FREE_COLOR}">${esc(draft.title||'Training')}</span>`}
