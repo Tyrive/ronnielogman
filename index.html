@@ -1018,6 +1018,7 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
     <div class="grp"><h3>Training</h3><div class="glist">
       <label class="grow"><span class="gl">Pausen-Timer zwischen den Sätzen<small>Startet nach jedem abgehakten Satz</small></span><input type="checkbox" class="tgl" id="meAuto"></label>
       <div class="grow col" id="meRestRow"><div class="growr"><span>Pausenzeit</span><div class="gstep rstep"><button data-rstep="-15" aria-label="15 Sekunden weniger">−15 s</button><b id="meRest" aria-live="polite"></b><button data-rstep="15" aria-label="15 Sekunden mehr">+15 s</button></div></div><div class="chips" id="meRestChips"></div></div>
+      <label class="grow"><span class="gl">Satz beim Ändern der Wiederholungen abhaken<small>Die Pause startet dann automatisch · gilt nur für dieses Handy</small></span><input type="checkbox" class="tgl" id="meAutoDone"></label>
       <label class="grow" id="meSigRow"><span class="gl">Ton und Vibration am Pausenende<small>Klappt nur, solange die App geöffnet ist</small></span><input type="checkbox" class="tgl" id="meSig"></label>
       <label class="grow"><span class="gl">Wochenziel<small>Ziel und Serie auf der Startseite</small></span><input type="checkbox" class="tgl" id="meGoalOn"></label>
       <div class="grow" id="meGoalRow" style="cursor:default"><span class="gl">Trainings pro Woche</span><div class="gstep"><button data-goal="-1" aria-label="Weniger">−</button><b id="meGoal"></b><button data-goal="1" aria-label="Mehr">+</button></div></div>
@@ -1697,11 +1698,11 @@ $('tpls').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if
   if(p){draft.planId=p.id;draft.title=p.name;if(!editingId){draft.exercises=p.exercises.map(newEx);applyPlanSS(p.id)}}else{draft.planId=null;draft.title=FREE_NAME;if(!editingId&&draft.exercises.length&&!draft.exercises.some(e=>e.sets.some(x=>x._d)))draft.exercises=[]}renderTpls();renderExList();
   if(!p&&!editingId&&!draft.exercises.length){setPicker(true);$('picker').scrollIntoView({block:'start',behavior:SMOOTH()})}});
 $('exList').addEventListener('keydown',e=>{const dn=e.target.closest('[data-done]');if(dn&&(e.key==='Enter'||e.key===' ')){e.preventDefault();dn.click()}});
-$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f){draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;updPR(+t.dataset.e);wkBegin();saveDraftSoon();renderWTop()}else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
-$('exList').addEventListener('click',e=>{const dn=e.target.closest('[data-done]');if(dn){const[i,j]=dn.dataset.done.split('_').map(Number),x=draft.exercises[i].sets[j];const on=!x._d;markDone(i,j,on);if(on){lastSet={i,j};wkBegin()}return}
+$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f){draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;updPR(+t.dataset.e);wkBegin();saveDraftSoon();if(t.dataset.f==='r')repsChanged(+t.dataset.e,+t.dataset.s);renderWTop()}else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
+$('exList').addEventListener('click',e=>{const dn=e.target.closest('[data-done]');if(dn){const[i,j]=dn.dataset.done.split('_').map(Number),x=draft.exercises[i].sets[j];const on=!x._d;markDone(i,j,on);if(on){lastSet={i,j};wkBegin()}else{clearTimeout(adT);if(running()&&lastSet&&lastSet.i===i&&lastSet.j===j)stopRest()}return}
   const t=e.target.closest('button');if(!t)return;if(!$('saveAsk').hidden&&!t.dataset.step)hideAsk();
   if(t.dataset.step){const[i,j,f,d]=t.dataset.step.split('_'),set=draft.exercises[+i].sets[+j],v=Math.max(0,Math.round((num(set[f])+(+d))*100)/100);
-    set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');updPR(+i);wkBegin();saveDraftSoon();renderWTop();return}
+    set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');updPR(+i);wkBegin();saveDraftSoon();if(f==='r')repsChanged(+i,+j);renderWTop();return}
   if(t.dataset.ss!==undefined){const k=+t.dataset.ss,e=draft.exercises[k];if(e.ss)delete e.ss;else e.ss=1;renderExList();return}
   if(t.dataset.mv){const[i,d]=t.dataset.mv.split('_').map(Number),j=i+d,a=draft.exercises;if(j<0||j>=a.length)return;
     for(let k=Math.min(i,j)-1;k<=Math.max(i,j);k++)if(a[k])delete a[k].ss;
@@ -2318,15 +2319,25 @@ $('wChips').addEventListener('click',e=>{if($('wChips').dataset.nc)return;const 
 $('wRest').addEventListener('click',()=>showRest(true));
 $('wGo').addEventListener('click',()=>{const n=nextSet();if(!n){finishWorkout();return}
   if(!$('saveAsk').hidden)hideAsk();
-  markDone(n.i,n.j,1);lastSet={i:n.i,j:n.j};wkBegin();updPR(n.i);
-  const nn=nextSet(),A=draft.exercises;
-  const sameRound=nn&&n.grp.length>1&&n.grp.includes(nn.i)&&nn.j===n.j&&nn.i!==n.i;
-  const dropNext=nn&&nn.i===n.i&&A[nn.i].sets[nn.j].dr;
+  clearTimeout(adT);markDone(n.i,n.j,1);lastSet={i:n.i,j:n.j};wkBegin();updPR(n.i);
   try{navigator.vibrate&&navigator.vibrate(25)}catch(_){}
-  if(nn&&!sameRound&&!dropNext&&autoRest){startRest();showRest(true)}
-  else if(!nn)toast('Alle Sätze geschafft 💪');
+  const nn=restAfter(n.i,n.j);
   if(nn){const c=$('exc'+nn.i);if(c&&nn.i!==n.i){const y=c.getBoundingClientRect().top+window.scrollY-150;window.scrollTo({top:y,behavior:SMOOTH()})}}
   renderWTop()});
+/* Nach einem abgehakten Satz: Pause starten (nicht innerhalb einer Supersatz-Runde oder vor einem Dropsatz) */
+function grpOf(i){const A=draft.exercises;let a=i,b=i;while(a>0&&A[a-1].ss)a--;while(A[b].ss&&A[b+1])b++;const g=[];for(let k=a;k<=b;k++)g.push(k);return g}
+function restAfter(i,j){const nn=nextSet(),A=draft.exercises,g=grpOf(i);
+  const sameRound=nn&&g.length>1&&g.includes(nn.i)&&nn.j===j&&nn.i!==i;
+  const dropNext=nn&&nn.i===i&&A[nn.i].sets[nn.j].dr;
+  if(nn&&!sameRound&&!dropNext&&autoRest){startRest();showRest(true)}
+  else if(!nn)toast('Alle Sätze geschafft 💪');
+  return nn}
+/* Optional: Satz abhaken, sobald die Wiederholungen geändert werden (Pause nach 1,5 s Ruhe) */
+const AUTODONE_KEY='ronnielogman.autodone';let autoDone=false,adT=null;try{autoDone=localStorage.getItem(AUTODONE_KEY)==='1'}catch(e){}
+function repsChanged(i,j){if(!autoDone||editingId)return;const x=draft.exercises[i]&&draft.exercises[i].sets[j];if(!x)return;
+  if(!x._d){if(!(num(x.r)>0))return;markDone(i,j,1);lastSet={i,j}}
+  else if(!(lastSet&&lastSet.i===i&&lastSet.j===j&&adT))return;
+  clearTimeout(adT);adT=setTimeout(()=>{adT=null;const y=draft.exercises[i]&&draft.exercises[i].sets[j];if(!y||!y._d||running())return;restAfter(i,j);renderWTop()},1500)}
 function finishWorkout(){saveOpt={};doSave()}
 $('wEnd').addEventListener('click',()=>{const any=editingId||draft.exercises.some(e=>e.sets.some(x=>num(x.r)>0));
   if(type!=='kraft'||any){finishWorkout();return}
@@ -2443,7 +2454,7 @@ function renderMe(){const mail=($('acMail')&&$('acMail').textContent||'').trim()
   $('meExN').textContent=LIB.filter(x=>!isHidden(x.n)).length+db.custom.filter(c=>!c.of).length;
   $('meRest').textContent=mmss(rest);
   $('meRestChips').innerHTML=REST_PRESETS.map(v=>`<button class="chip${v===rest?' on':''}" data-rest="${v}">${v<60?v+' s':mmss(v)}</button>`).join('');
-  $('meAuto').checked=autoRest;$('meRestRow').hidden=!autoRest;$('meSigRow').hidden=!autoRest;
+  $('meAutoDone').checked=autoDone;$('meAuto').checked=autoRest;$('meRestRow').hidden=!autoRest;$('meSigRow').hidden=!autoRest;
   $('meSig').checked=sigOn;$('meGoal').textContent=(db.goals.kraft||4)+' pro Woche';$('meGoalOn').checked=!db.goals.off;$('meGoalRow').hidden=!!db.goals.off;
   renderData()}
 $('tab-me').addEventListener('click',e=>{const r=e.target.closest('[data-rest]');if(r){setRest(+r.dataset.rest);renderMe();return}
@@ -2453,6 +2464,7 @@ $('tab-me').addEventListener('click',e=>{const r=e.target.closest('[data-rest]')
   if(sb.dataset.sub==='ex'){const b=document.querySelector(`#exSub [data-sub="${f}"]`);if(b)b.click()}
   else{const cards=[...document.querySelectorAll('#tab-data>.card')];const want={acc:'Konto',imp:'Daten importieren',bak:'Backup'}[f];const c=cards.find(x=>{const h=x.querySelector('h2');return h&&h.textContent.trim()===want});
     if(c&&f!=='acc')setTimeout(()=>{const y=c.getBoundingClientRect().top+window.scrollY-16;window.scrollTo({top:y,behavior:SMOOTH()})},60)}});
+$('meAutoDone').addEventListener('change',e=>{autoDone=e.target.checked;try{localStorage.setItem(AUTODONE_KEY,autoDone?'1':'0')}catch(_){}});
 $('meAuto').addEventListener('change',e=>{autoRest=e.target.checked;try{localStorage.setItem(AUTO_KEY,autoRest?'1':'0')}catch(_){}if(!autoRest&&running())stopRest();renderMe()});
 $('meGoalOn').addEventListener('change',e=>{if(e.target.checked)delete db.goals.off;else db.goals.off=true;persist();renderMe()});
 $('meSig').addEventListener('change',e=>{sigOn=e.target.checked;try{localStorage.setItem(SIG_KEY,sigOn?'1':'0')}catch(_){}if($('tSig'))$('tSig').checked=sigOn});
