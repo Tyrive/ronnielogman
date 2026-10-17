@@ -215,6 +215,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .app[data-tab="train"]~.bnav{display:none}
 .app:not([data-tab="train"])~.wgo{display:none}
 .panel.enter{animation:penter .35s cubic-bezier(.2,.8,.2,1)}
+.app{overflow-x:clip}
 .panel.enter.fromR{animation-name:pslideR}
 .panel.enter.fromL{animation-name:pslideL}
 @keyframes pslideR{from{opacity:0;transform:translateX(28px)}}
@@ -2246,6 +2247,7 @@ function switchTab(t){if(t==='train'&&tab!=='train')retTab=tab;const changed=t!=
   const NI={home:0,cal:1,prog:3,me:4},ni=NI[NAV_OF[t]],dir=prevNav==null||ni==null||ni===prevNav?'':ni>prevNav?'fromR':'fromL';if(ni!=null)prevNav=ni;
   TABS.forEach(k=>{const el=$('tab-'+k);el.hidden=k!==t;if(k===t&&changed){el.classList.remove('enter','fromR','fromL');void el.offsetWidth;el.classList.add('enter');if(dir)el.classList.add(dir)}});
   document.querySelectorAll('#bnav [data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===NAV_OF[t]));moveInd();
+  if(t==='home'&&changed){const l=$('hLogo');if(l){l.classList.remove('spin');void l.offsetWidth;l.classList.add('spin')}}
   if(t!=='train'&&!$('restOv').hidden)showRest(false);
   if(t!=='prog')progShown=false;
   renderAll();window.scrollTo(0,0)}
@@ -2326,13 +2328,7 @@ plDraft.color=freeColor();persist();setMode();
 /* Kleinigkeiten: Wackeln bei Fehlermeldungen, Logo zum Aktualisieren herunterziehen */
 function shake(el){if(!el)return;el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');setTimeout(()=>el.classList.remove('shake'),450)}
 new MutationObserver(ms=>ms.forEach(m=>{const t=m.target.nodeType===1?m.target:m.target.parentElement;const e=t&&t.closest&&t.closest('.msg-err');if(e&&e.textContent.trim())shake(e.closest('.card,.newexf,.saveask')||e)})).observe(document.body,{subtree:true,childList:true,characterData:true});
-(()=>{let y0=null,d=0;const logo=()=>$('hLogo');
-  window.addEventListener('touchstart',e=>{if(tab!=='home'||window.scrollY>0)return;y0=e.touches[0].clientY;d=0},{passive:true});
-  window.addEventListener('touchmove',e=>{if(y0==null)return;d=Math.max(0,e.touches[0].clientY-y0);const l=logo();if(!l)return;const k=Math.min(d,110);l.classList.add('pull');l.style.transform=`translateY(${k*.45}px) rotate(${k*2.2}deg) scale(${1+k/600})`},{passive:true});
-  window.addEventListener('touchend',()=>{if(y0==null)return;const l=logo();y0=null;if(!l)return;l.classList.remove('pull');l.style.transform='';
-    if(d>80){l.classList.remove('spin');void l.offsetWidth;l.classList.add('spin');try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}
-      const inn=$('acIn')&&!$('acIn').hidden;if(inn){$('hAv').classList.add('sync');$('acSyncNow').click();setTimeout(()=>{$('hAv').classList.remove('sync');renderAll();toast('Synchronisiert')},1400)}else{renderHome();toast('Alles aktuell')}}
-    d=0},{passive:true})})();
+
 /* ===== Neuer Aufbau: Heute, Training-Modus, Pause, Profil ===== */
 let restTotal=90;
 const AUTO_KEY='ronnielogman.autorest';let autoRest=true;try{autoRest=localStorage.getItem(AUTO_KEY)!=='0'}catch(e){}
