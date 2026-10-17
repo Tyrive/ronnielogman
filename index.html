@@ -351,6 +351,9 @@ body{min-height:100vh;min-height:100dvh;background-repeat:no-repeat!important}
 .gstep button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font-size:18px;cursor:pointer}
 .rstep button{width:auto;padding:0 10px;font:600 13px var(--body)}
 .rstep b{min-width:56px!important;font-size:16px!important}
+.durin{display:flex;align-items:baseline;gap:4px;padding:0 6px}
+.durin input{width:56px;text-align:center;font:600 18px var(--mono);padding:6px 4px;border-radius:10px}
+.durin small{color:var(--muted);font-size:12px}
 .gstep b{min-width:92px;text-align:center;font:500 14px var(--mono)}
 .tgl{appearance:none;-webkit-appearance:none;width:48px;height:28px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);position:relative;cursor:pointer;flex:none;margin:0;transition:background .2s,border-color .2s}
 .tgl::after{content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:transform .25s cubic-bezier(.3,1.4,.5,1),background .2s}
@@ -888,6 +891,7 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
       </div>
     </div>
 
+    <div class="card durcard" id="durCard" hidden><div class="growr"><span class="klabel">Trainingsdauer</span><div class="gstep rstep"><button data-dstep="-5" aria-label="5 Minuten weniger">−5</button><span class="durin"><input id="fDur" inputmode="numeric" placeholder="–" aria-label="Dauer in Minuten"><small>min</small></span><button data-dstep="5" aria-label="5 Minuten mehr">+5</button></div></div></div>
     <label id="noteWrap">Notiz<textarea id="fNote" placeholder="Wie lief's?"></textarea></label>
     <div class="saveask" id="saveAsk" hidden role="alertdialog" aria-live="assertive"></div>
     <button class="primary" id="save">Training speichern</button>
@@ -1628,7 +1632,7 @@ $('wkKeep').addEventListener('click',()=>{$('wkAsk').hidden=true});
 /* Laufendes Training sichern: bleibt beim Schließen der App erhalten */
 const DRAFT_KEY='ronnielogman.draft';let draftTimer=null,draftReady=false;
 function draftState(){return{v:1,ts:Date.now(),type,selDate,editingId,draft,runSel,sportSel,
-  f:{fNote:$('fNote').value,lDist:$('lDist').value,lMin:$('lMin').value,lSec:$('lSec').value,lHr:$('lHr').value,sName:$('sName').value,sMin:$('sMin').value}}}
+  f:{fDur:$('fDur').value,fNote:$('fNote').value,lDist:$('lDist').value,lMin:$('lMin').value,lSec:$('lSec').value,lHr:$('lHr').value,sName:$('sName').value,sMin:$('sMin').value}}}
 function saveDraftNow(){if(!draftReady)return;clearTimeout(draftTimer);const st=draftState(),f=st.f;
   const has=st.editingId||st.draft.title||st.draft.exercises.length||Object.values(f).some(v=>String(v||'').trim());
   try{has?localStorage.setItem(DRAFT_KEY,JSON.stringify(st)):localStorage.removeItem(DRAFT_KEY)}catch(e){}}
@@ -1672,7 +1676,7 @@ function renderExList(){
   renderWTop();
 }
 function renderForm(){
-  $('editBar').hidden=!editingId;
+  $('editBar').hidden=!editingId;$('durCard').hidden=!(editingId&&type==='kraft');
   $('modeName').textContent=MODE_NAME[type];
   if(tab==='train')$('timer').hidden=type!=='kraft';
   $('save').textContent=editingId?'Änderungen speichern':'Training speichern';
@@ -1693,11 +1697,11 @@ $('tpls').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if
   if(p){draft.planId=p.id;draft.title=p.name;if(!editingId){draft.exercises=p.exercises.map(newEx);applyPlanSS(p.id)}}else{draft.planId=null;draft.title=FREE_NAME;if(!editingId&&draft.exercises.length&&!draft.exercises.some(e=>e.sets.some(x=>x._d)))draft.exercises=[]}renderTpls();renderExList();
   if(!p&&!editingId&&!draft.exercises.length){setPicker(true);$('picker').scrollIntoView({block:'start',behavior:SMOOTH()})}});
 $('exList').addEventListener('keydown',e=>{const dn=e.target.closest('[data-done]');if(dn&&(e.key==='Enter'||e.key===' ')){e.preventDefault();dn.click()}});
-$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f){draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;updPR(+t.dataset.e);wkBegin();if(t.dataset.f==='r'){lastSet={i:+t.dataset.e,j:+t.dataset.s};markDone(+t.dataset.e,+t.dataset.s,1)}else saveDraftSoon()}else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
+$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f){draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;updPR(+t.dataset.e);wkBegin();saveDraftSoon();renderWTop()}else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
 $('exList').addEventListener('click',e=>{const dn=e.target.closest('[data-done]');if(dn){const[i,j]=dn.dataset.done.split('_').map(Number),x=draft.exercises[i].sets[j];const on=!x._d;markDone(i,j,on);if(on){lastSet={i,j};wkBegin()}return}
   const t=e.target.closest('button');if(!t)return;if(!$('saveAsk').hidden&&!t.dataset.step)hideAsk();
   if(t.dataset.step){const[i,j,f,d]=t.dataset.step.split('_'),set=draft.exercises[+i].sets[+j],v=Math.max(0,Math.round((num(set[f])+(+d))*100)/100);
-    set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');updPR(+i);wkBegin();if(f==='r'){lastSet={i:+i,j:+j};markDone(+i,+j,1)}else saveDraftSoon();return}
+    set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');updPR(+i);wkBegin();saveDraftSoon();renderWTop();return}
   if(t.dataset.ss!==undefined){const k=+t.dataset.ss,e=draft.exercises[k];if(e.ss)delete e.ss;else e.ss=1;renderExList();return}
   if(t.dataset.mv){const[i,d]=t.dataset.mv.split('_').map(Number),j=i+d,a=draft.exercises;if(j<0||j>=a.length)return;
     for(let k=Math.min(i,j)-1;k<=Math.max(i,j);k++)if(a[k])delete a[k].ss;
@@ -1712,13 +1716,14 @@ $('exList').addEventListener('click',e=>{const dn=e.target.closest('[data-done]'
   else if(t.dataset.delset){const[i,j]=t.dataset.delset.split('_').map(Number);draft.exercises[i].sets.splice(j,1)}
   else return;renderExList()});
 
-function resetForm(){draft={title:'',planId:null,exercises:[]};swapIdx=null;confirmDel=null;if($('saveAsk'))hideAsk();['lDist','lMin','lSec','lHr','sMin','sName','fNote'].forEach(id=>$(id).value='');runSel='z2';updPace()}
+function resetForm(){draft={title:'',planId:null,exercises:[]};swapIdx=null;confirmDel=null;if($('saveAsk'))hideAsk();['lDist','lMin','lSec','lHr','sMin','sName','fNote','fDur'].forEach(id=>$(id).value='');runSel='z2';updPace()}
 function startEdit(id){const s=db.sessions.find(x=>x.id===id);if(!s)return;resetForm();editingId=id;type=s.type;
-  if(s.type==='kraft'){const p=planOf(s);draft={planId:p?p.id:null,title:p?p.name:'Frei',exercises:s.exercises.map(e=>({name:e.name,note:e.note||'',...(e.ss?{ss:1}:{}),sets:e.sets.map(x=>({w:x.w||'',r:x.r,_d:1,...(x.dr?{dr:1}:{})}))}))}}
+  if(s.type==='kraft'){const p=planOf(s);draft={planId:p?p.id:null,title:p?p.name:'Frei',exercises:s.exercises.map(e=>({name:e.name,note:e.note||'',...(e.ss?{ss:1}:{}),sets:e.sets.map(x=>({w:x.w||'',r:x.r,_d:1,...(x.dr?{dr:1}:{})}))}))};$('fDur').value=s.dur?Math.round(s.dur/60):''}
   else if(s.type==='lauf'){$('lDist').value=String(s.dist).replace('.',',');$('lMin').value=Math.floor(s.sec/60);$('lSec').value=pad(s.sec%60);$('lHr').value=s.hr||'';runSel=runKind(s);updPace()}
   else{const known=SPORTS.some(c=>c[0]===s.sport&&c[0]!=='Andere');sportSel=known?s.sport:'Andere';if(!known)$('sName').value=s.sport==='Andere'?'':s.sport;$('sMin').value=s.min}
   $('fNote').value=s.note||'';renderDay();renderForm();$('editBar').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'})}
 function cancelEdit(){editingId=null;resetForm();renderDay();renderForm()}
+$('durCard').addEventListener('click',e=>{const b=e.target.closest('[data-dstep]');if(!b)return;const v=Math.max(0,num($('fDur').value)+(+b.dataset.dstep));$('fDur').value=v||'';saveDraftSoon()});
 $('cancelEdit').addEventListener('click',()=>{cancelEdit();switchTab(retTab==='train'?'cal':retTab)});
 
 /* Rückfragen vor dem Speichern */
@@ -1790,7 +1795,7 @@ function doSave(){
   const base={id:old?old.id:uid(),date:old?old.date:selDate,note:$('fNote').value.trim()};let s;
   if(type==='kraft'){const ex=draft.exercises.map(e=>{const o={name:e.name,sets:e.sets.filter(x=>num(x.r)>0).map(x=>x.dr?{w:num(x.w),r:num(x.r),dr:1}:{w:num(x.w),r:num(x.r)})};const n=(e.note||'').trim();if(n)o.note=n;if(e.ss)o.ss=1;return o}).filter(e=>e.sets.length);ssFix(ex);
     if(!ex.length){toast('Trag mindestens einen Satz mit Wiederholungen ein');return}
-    const p=db.plans.find(x=>x.id===draft.planId);s={...base,type,title:p?p.name:FREE_NAME,exercises:ex};if(old&&old.dur)s.dur=old.dur;else if(!old&&wkStart)s.dur=Math.round((Date.now()-wkStart)/1000);if(p){s.planId=p.id;s.color=p.color}}
+    const p=db.plans.find(x=>x.id===draft.planId);s={...base,type,title:p?p.name:FREE_NAME,exercises:ex};if(old){const m=num($('fDur').value);if(m>0)s.dur=Math.min(1440,Math.round(m))*60}else if(wkStart)s.dur=Math.round((Date.now()-wkStart)/1000);if(p){s.planId=p.id;s.color=p.color}}
   else if(type==='lauf'){const dist=num($('lDist').value),sec=num($('lMin').value)*60+num($('lSec').value);
     if(!dist||!sec){toast('Distanz und Dauer fehlen');return}
     s={...base,type,title:RUN_KINDS.find(r=>r[0]===runSel)[1],kind:runSel,dist,sec,hr:num($('lHr').value)||null}}
