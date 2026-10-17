@@ -554,6 +554,11 @@ body,.card,.tabs,.day,.entry{transition:background-color .35s,border-color .35s,
 .libItem i{font-style:normal;font-family:var(--mono);font-size:18px;color:var(--accent)}
 .libItem.in i{color:var(--ok)}
 .libItem.custom b{color:var(--accent)}
+.newex{align-self:flex-start;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.newexf{display:flex;flex-direction:column;gap:8px;padding:12px;border:1.5px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,var(--surface));animation:finUp .25s ease}
+.newexf .chips{flex-wrap:wrap}
+.nxbtns{display:flex;gap:8px;justify-content:flex-end}
+.nxok{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 
 canvas{width:100%;height:210px;display:block}
 /* Tag mit seinen Trainings als eine Einheit */
@@ -867,6 +872,14 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
           <input id="libQ" type="search" placeholder="Suchen, z. B. Rudern" aria-label="Übung suchen">
           <div class="chips scroll" id="libMuscle" aria-label="Muskelgruppe"></div>
           <div class="chips scroll" id="libEq" aria-label="Equipment"></div>
+          <button class="btn small newex" id="newExBtn">＋ Neue Übung erstellen</button>
+          <div class="newexf" id="newExForm" hidden>
+            <label><span>Name der Übung</span><input id="nxName" maxlength="60" placeholder="z. B. Bankdrücken Smith-Maschine"></label>
+            <span class="klabel">Muskelgruppe</span><div class="chips" id="nxM"></div>
+            <span class="klabel">Equipment</span><div class="chips" id="nxE"></div>
+            <div class="msg-err" id="nxMsg"></div>
+            <div class="nxbtns"><button class="btn small" id="nxCancel">Abbrechen</button><button class="btn small nxok" id="nxSave"></button></div>
+          </div>
           <div class="lib" id="libList"></div>
           <button class="btn pickclose" id="pickClose">Schließen</button>
         </div>
@@ -1584,7 +1597,7 @@ function renderLib(){
   const raw=$('libQ').value.trim(),q=norm(raw),all=libItems(),inDraft=new Set(draft.exercises.map(e=>e.name));
   const items=all.filter(x=>(libM==='Alle'||x.m===libM)&&(libE==='Alle'||x.e===libE)&&(!q||norm(x.n).includes(q)));
   let html='';
-  if(raw&&!all.some(x=>norm(x.n)===q))html+=`<button class="libItem custom" data-add="${esc(raw)}"><span><b>„${esc(raw)}“</b><small>Als eigene Übung hinzufügen</small></span><i>+</i></button>`;
+  if(raw&&!all.some(x=>norm(x.n)===q))html+=`<button class="libItem custom" data-newex="${esc(raw)}"><span><b>„${esc(raw)}“</b><small>Als neue Übung anlegen${swapIdx!==null?' und austauschen':''}</small></span><i>+</i></button>`;
   html+=items.map(x=>`<button class="libItem${inDraft.has(x.n)?' in':''}" data-add="${esc(x.n)}">${exIcon(x.n,'m')}<span class="li"><b>${esc(x.n)}</b><small>${esc(x.m)}${x.e?' · '+esc(x.e):''}${x.own?' · eigene':''}</small></span><i>${inDraft.has(x.n)?'✓':'+'}</i></button>`).join('');
   if(!html)html='<div class="muted" style="padding:10px 12px">Keine Übung für diese Filter. Tipp einen Namen ein, um eine eigene anzulegen.</div>';
   $('libList').innerHTML=html;$('libCount').textContent=items.length+' Übungen';
@@ -1595,7 +1608,8 @@ function renderLib(){
 $('libQ').addEventListener('input',renderLib);
 $('libMuscle').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;libM=b.dataset.m;renderLib()});
 $('libEq').addEventListener('click',e=>{const b=e.target.closest('[data-eq]');if(!b)return;libE=b.dataset.eq;renderLib()});
-$('libList').addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;const n=b.dataset.add;
+$('libList').addEventListener('click',e=>{const nx=e.target.closest('[data-newex]');if(nx){openNewEx(nx.dataset.newex);return}const b=e.target.closest('[data-add]');if(!b)return;pickEx(b.dataset.add)});
+function pickEx(n){
   if(swapIdx!==null&&draft.exercises[swapIdx]){
     const i=swapIdx,old=draft.exercises[i].name;
     if(n===old){toast('Das ist schon diese Übung');return}
@@ -1604,7 +1618,26 @@ $('libList').addEventListener('click',e=>{const b=e.target.closest('[data-add]')
     const c=$('exc'+i);if(c)c.scrollIntoView({block:'center',behavior:SMOOTH()});
     toast(lastFor(n)?n+' eingesetzt, Werte vom letzten Training':n+' eingesetzt');return}
   if(draft.exercises.some(x=>x.name===n)){toast('Ist schon im Training');return}
-  draft.exercises.push(newEx(n));if(!draft.title)draft.title='Frei';$('libQ').value='';setPicker(false);renderTpls();renderExList();const nc=$('exList').lastElementChild;if(nc)nc.scrollIntoView({block:'center',behavior:SMOOTH()});toast(n+' hinzugefügt')});
+  draft.exercises.push(newEx(n));if(!draft.title)draft.title='Frei';$('libQ').value='';setPicker(false);renderTpls();renderExList();const nc=$('exList').lastElementChild;if(nc)nc.scrollIntoView({block:'center',behavior:SMOOTH()});toast(n+' hinzugefügt')}
+/* Neue Übung direkt im Training anlegen, in der Bibliothek speichern und hinzufügen bzw. austauschen */
+let nxM='',nxE='';
+function openNewEx(name){const f=$('newExForm');f.hidden=false;$('newExBtn').hidden=true;$('nxName').value=name||$('libQ').value.trim();
+  const sw=swapIdx!==null&&draft.exercises[swapIdx],inf=sw&&libInfo(sw.name);nxM=inf&&MUSCLES.includes(inf.m)?inf.m:(libM!=='Alle'?libM:'');nxE=libE!=='Alle'?libE:'';
+  renderNewEx();setTimeout(()=>{$('nxName').focus();f.scrollIntoView({block:'nearest',behavior:SMOOTH()})},50)}
+function closeNewEx(){$('newExForm').hidden=true;$('newExBtn').hidden=false;$('nxMsg').textContent=''}
+function renderNewEx(){$('nxM').innerHTML=MUSCLES.filter(m=>m!=='Alle').map(m=>`<button class="chip${m===nxM?' on':''}" data-nxm="${m}">${m}</button>`).join('');
+  $('nxE').innerHTML=EQUIP.filter(x=>x!=='Alle').map(x=>`<button class="chip${x===nxE?' on':''}" data-nxe="${x}">${x}</button>`).join('');
+  $('nxSave').textContent=swapIdx!==null&&draft.exercises[swapIdx]?'Anlegen und austauschen':'Anlegen und hinzufügen'}
+$('newExBtn').addEventListener('click',()=>openNewEx(''));
+$('nxCancel').addEventListener('click',closeNewEx);
+$('newExForm').addEventListener('click',e=>{const m=e.target.closest('[data-nxm]');if(m){nxM=nxM===m.dataset.nxm?'':m.dataset.nxm;renderNewEx();return}
+  const q=e.target.closest('[data-nxe]');if(q){nxE=nxE===q.dataset.nxe?'':q.dataset.nxe;renderNewEx()}});
+$('nxSave').addEventListener('click',()=>{const n=$('nxName').value.trim().replace(/\s+/g,' ');
+  if(!n){$('nxMsg').textContent='Bitte einen Namen eingeben.';return}
+  if(!nxM){$('nxMsg').textContent='Bitte eine Muskelgruppe wählen.';return}
+  const ex=libItems().find(x=>norm(x.n)===norm(n));
+  if(!ex){db.custom.push({n,m:nxM,e:nxE});persist()}
+  closeNewEx();$('libQ').value='';pickEx(ex?ex.n:n);if(!ex)toast(n+' in der Bibliothek gespeichert')});
 
 const draftDate=()=>{const o=editingId&&db.sessions.find(x=>x.id===editingId);return o?o.date:selDate};
 function markDone(i,j,on){const x=draft.exercises[i]&&draft.exercises[i].sets[j];if(!x)return;x._d=on?1:0;const r=$('sr'+i+'_'+j);if(r)r.classList.toggle('done',!!on);const n=$('n'+i+'_'+j);if(n)n.setAttribute('aria-pressed',on?'true':'false');if(typeof saveDraftSoon==='function')saveDraftSoon();if(typeof renderWTop==='function')renderWTop()}
@@ -2141,7 +2174,7 @@ const SMOOTH=()=>matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'s
 let pickOpen=false,swapIdx=null,confirmDel=null;
 function startSwap(i){swapIdx=i;$('libQ').value='';const inf=libInfo(draft.exercises[i].name);libM=inf&&MUSCLES.includes(inf.m)?inf.m:'Alle';libE='Alle';
   renderExList();setPicker(true);$('picker').scrollIntoView({block:'start',behavior:SMOOTH()})}
-function setPicker(o){pickOpen=o;if(!o&&swapIdx!==null){swapIdx=null;renderExList()}$('picker').classList.toggle('open',o);$('pickBody').hidden=!o;$('pickToggle').setAttribute('aria-expanded',String(o));if(o)renderLib()}
+function setPicker(o){pickOpen=o;if(!o&&$('newExForm'))closeNewEx();if(!o&&swapIdx!==null){swapIdx=null;renderExList()}$('picker').classList.toggle('open',o);$('pickBody').hidden=!o;$('pickToggle').setAttribute('aria-expanded',String(o));if(o)renderLib()}
 $('pickToggle').addEventListener('click',()=>{setPicker(!pickOpen);if(pickOpen)$('picker').scrollIntoView({block:'start',behavior:SMOOTH()})});
 $('pickBody').addEventListener('click',e=>{if(e.target.id==='swapCancel'){setPicker(false);const c=document.querySelector('#exList .card');if(c)c.scrollIntoView({block:'nearest',behavior:SMOOTH()})}});
 $('pickClose').addEventListener('click',()=>{setPicker(false);$('picker').scrollIntoView({block:'nearest',behavior:SMOOTH()})});
