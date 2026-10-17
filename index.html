@@ -245,10 +245,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .srow.pop .n:not(.pr){animation:nfill .45s cubic-bezier(.3,1.6,.5,1);background:linear-gradient(var(--accent),var(--accent)) bottom/100% 100% no-repeat}
 @keyframes nfill{0%{background-size:100% 0;transform:scale(.8)}60%{transform:scale(1.25)}100%{background-size:100% 100%;transform:scale(1)}}
 .srow{position:relative}
-.srow.pop::after{content:"";position:absolute;inset:0;border-radius:12px;box-shadow:0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 55%,transparent);opacity:0;animation:rflash .6s ease-out;pointer-events:none}
+.srow.pop::after{content:"";position:absolute;inset:0;border-radius:12px;background:color-mix(in srgb,var(--accent) 30%,transparent);opacity:0;animation:rflash .6s ease-out;pointer-events:none}
 @keyframes rflash{25%{opacity:1}100%{opacity:0}}
-.srow.pop .n:not(.pr)::after{content:"";position:absolute;width:24px;height:24px;border-radius:50%;border:2px solid var(--accent);animation:nring .55s ease-out forwards;pointer-events:none}
-@keyframes nring{from{transform:scale(1);opacity:.9}to{transform:scale(2.2);opacity:0}}
 .confetti{position:fixed;width:7px;height:11px;border-radius:2px;pointer-events:none;z-index:120}
 .shake{animation:shake .4s cubic-bezier(.36,.07,.19,.97)}
 @keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
