@@ -812,6 +812,32 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .ds-del.arm{background:var(--del);border-color:var(--del);color:#fff}
 .ds-foot{margin-top:12px}
 .ds-foot .btn{width:100%}
+[data-hist]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.last[data-hist]{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin-top:2px;background:color-mix(in srgb,var(--surface2) 55%,transparent);cursor:pointer;transition:transform .15s ease,border-color .15s ease}
+.last[data-hist]:active{transform:scale(.985);border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.last[data-hist] .hx-ic{width:15px;height:15px;flex:none;margin-left:auto;opacity:.65}
+.hx-top{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.hx-verdict{display:flex;align-items:center;gap:10px;font-weight:600}
+.hx-verdict .ar{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.hx-verdict.up .ar{color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,transparent)}
+.hx-verdict.down .ar{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.hx-verdict.eq .ar{color:var(--muted);background:var(--surface2)}
+.hx-verdict small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:1px}
+.hx-spark{width:100%;height:58px;display:block}
+.hx-spark polyline{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.hx-spark .ar2{fill:color-mix(in srgb,var(--accent) 14%,transparent);stroke:none}
+.hx-spark circle{fill:var(--accent)}
+.hx-legend{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.hx-row{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:start}
+.hx-d{font-weight:600;font-size:14.5px}
+.hx-d small{font-weight:400;color:var(--muted);font-size:12.5px;margin-left:6px}
+.hx-sets{grid-column:1/-1;font-size:14px;font-variant-numeric:tabular-nums;line-height:1.45}
+.hx-b{grid-column:1/-1;color:var(--muted);font-size:12.5px}
+.hx-t{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.hx-t.up{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.hx-t.down{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.hx-t.eq{color:var(--muted);background:var(--surface2)}
+.hx-t.first{color:var(--muted);background:transparent;border:1px solid var(--line)}
 .ds-empty{text-align:center;color:var(--muted);padding:18px 0 4px}
 @keyframes dsUp{from{transform:translateY(40px);opacity:0}}
 @keyframes dsFade{from{opacity:0}}
@@ -838,6 +864,11 @@ canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 <svg class="pl" viewBox="0 0 675 310" overflow="visible"><g transform="translate(-55.5 -21)"><g clip-path="url(#ovCW)"><path class="snk snkW" d="M482 65.5 L343.9 65.5 L251.6 157.8 L-1162.6 1572" fill="none" stroke="currentColor" stroke-width="43" stroke-linejoin="miter" stroke-dasharray="268.6 6000"/></g><polygon class="cap capW" points="266.8,173 198,181 236.4,142.6" fill="currentColor"/></g></svg><svg class="pr" viewBox="0 0 675 310" overflow="visible"><g transform="translate(-55.5 -21)"><g clip-path="url(#ovCO)"><path class="snk snkO" d="M249 200.5 L412.3 200.5 L525.6 87.2 L1939.8 -1327" fill="none" stroke="url(#ovG)" stroke-width="45" stroke-linejoin="miter" stroke-dasharray="323.5 6000"/></g><polygon class="cap capO" points="509.7,71.3 486,61.8 587.8,25 551,126.8 541.5,103.1" fill="url(#ovG)"/></g></svg><svg class="pt" viewBox="0 0 675 310"><use href="#ovWord" y="248" width="675" height="62"/></svg>
 </div></div>
 <div class="fin" id="fin" hidden role="dialog" aria-modal="true" aria-labelledby="finT"></div>
+<div class="dsheet" id="exSheet" hidden role="dialog" aria-modal="true" aria-labelledby="exsT"><div class="ds-in">
+  <div class="ds-grab"></div>
+  <div class="ds-h"><span style="width:30px"></span><div class="ds-t"><b id="exsT"></b><small id="exsS"></small></div><button class="icon" id="exsX" aria-label="Schließen">✕</button></div>
+  <div class="ds-body" id="exsB"></div>
+</div></div>
 <div class="dsheet" id="daySheet" hidden role="dialog" aria-modal="true" aria-labelledby="dsTitle"><div class="ds-in">
   <div class="ds-grab"></div>
   <div class="ds-h"><button class="icon" id="dsPrev" aria-label="Vorheriger Tag">‹</button><div class="ds-t"><b id="dsTitle"></b><small id="dsSub"></small></div><button class="icon" id="dsNext" aria-label="Nächster Tag">›</button><button class="icon" id="dsX" aria-label="Schließen">✕</button></div>
@@ -1588,6 +1619,43 @@ $('dsNext').addEventListener('click',()=>{dsDate=addDays(dsDate,1);renderDayShee
 $('dsGo').addEventListener('click',()=>{const ds=dsDate;closeDaySheet();openDay(ds)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('daySheet').hidden)closeDaySheet()});
 
+/* Verlauf einer Übung: lange auf den Übungsnamen drücken */
+function exHistory(name){
+  return db.sessions.filter(s=>s.type==='kraft'&&s.id!==editingId&&(s.exercises||[]).some(e=>e.name===name)).sort((a,b)=>b.date.localeCompare(a.date)).map(s=>{
+    const e=s.exercises.find(e=>e.name===name),sets=(e.sets||[]).filter(x=>num(x.r)>0);let best=null,b1=0;
+    sets.forEach(x=>{if(x.dr)return;const w=num(x.w),r=num(x.r),v=w>0?w*(1+r/30):r;if(v>b1){b1=v;best=x}});
+    return{s,sets,best,b1,vol:sets.reduce((a,x)=>a+num(x.w)*num(x.r),0)}}).filter(h=>h.sets.length)}
+const bestTxt=x=>x?(num(x.w)>0?fmt(num(x.w))+' kg × '+num(x.r):num(x.r)+' Wdh.'):'–';
+function hxCmp(a,b){if(!b||!b.b1)return'first';const d=(a.b1-b.b1)/b.b1;return d>0.01?'up':d<-0.01?'down':'eq'}
+const HX_L={up:'▲ stärker',down:'▼ schwächer',eq:'= gleich',first:'erstes Mal'};
+function daysAgoTxt(ds){const n=Math.round((parseD(todayIso())-parseD(ds))/864e5);return n<=0?'heute':n===1?'gestern':n<7?'vor '+n+' Tagen':n<14?'vor 1 Woche':n<60?'vor '+Math.round(n/7)+' Wochen':'vor '+Math.round(n/30)+' Monaten'}
+function openExHist(name){
+  const H=exHistory(name);$('exsT').textContent=name;
+  $('exsS').textContent=H.length?H.length+'× trainiert · zuletzt '+daysAgoTxt(H[0].s.date):'Noch nie trainiert';
+  if(!H.length){$('exsB').innerHTML='<div class="ds-empty">Für diese Übung gibt es noch keine gespeicherten Einheiten.</div>'}
+  else{
+    const c=hxCmp(H[0],H[1]);const top=H.reduce((m,h)=>h.b1>m.b1?h:m,H[0]);
+    const verdict=c==='first'?['eq','•','Erst eine Einheit gespeichert','Ab dem zweiten Mal siehst du hier, ob du stärker wirst.']:
+      [c,c==='up'?'▲':c==='down'?'▼':'=',c==='up'?'Letztes Mal stärker als davor':c==='down'?'Letztes Mal schwächer als davor':'Letztes Mal gleich stark wie davor',`Bester Satz ${bestTxt(H[0].best)}, davor ${bestTxt(H[1].best)}`];
+    const P=H.slice(0,12).reverse();let spark='';
+    if(P.length>1){const vs=P.map(h=>h.b1),mn=Math.min(...vs),mx=Math.max(...vs),rg=mx-mn||1;
+      const pts=P.map((h,k)=>[(k/(P.length-1))*300,50-((h.b1-mn)/rg)*42]);const pl=pts.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');const lp=pts[pts.length-1];
+      spark=`<svg class="hx-spark" viewBox="-6 0 312 58" preserveAspectRatio="none" aria-hidden="true"><polygon class="ar2" points="0,58 ${pl} 300,58"/><polyline points="${pl}"/><circle cx="${lp[0]}" cy="${lp[1]}" r="3.6"/></svg><div class="hx-legend"><span>${shortDay(P[0].s.date)}</span><span>Bester Satz je Einheit</span><span>${shortDay(P[P.length-1].s.date)}</span></div>`}
+    $('exsB').innerHTML=`<div class="hx-top"><div class="hx-verdict ${verdict[0]}"><span class="ar">${verdict[1]}</span><div>${verdict[2]}<small>${verdict[3]}</small></div></div>${spark}<div class="hx-legend"><span>Bestwert: ${bestTxt(top.best)} (${shortDay(top.s.date)})</span></div></div>`+
+      H.slice(0,30).map((h,k)=>{const t=hxCmp(h,H[k+1]),pl=planOf(h.s);return`<div class="hx-row"><div class="hx-d">${shortDay(h.s.date)}<small>${daysAgoTxt(h.s.date)}${pl?' · '+esc(pl.name):h.s.title?' · '+esc(h.s.title):''}</small></div><span class="hx-t ${t}">${HX_L[t]}</span><div class="hx-sets">${setsSummary(h.sets,prIndex(name,h.sets,h.s.date,h.s.id))}</div><div class="hx-b">Bester Satz ${bestTxt(h.best)}${h.vol?' · '+fmt(h.vol,0)+' kg Volumen':''}</div></div>`}).join('')}
+  $('exSheet').hidden=false;$('exsB').scrollTop=0}
+function closeExHist(){$('exSheet').hidden=true}
+$('exsX').addEventListener('click',closeExHist);
+$('exSheet').addEventListener('click',e=>{if(e.target.id==='exSheet')closeExHist()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('exSheet').hidden)closeExHist()});
+(function(){const L=$('exList');let t=null,sx=0,sy=0,fired=false;const stop=()=>{clearTimeout(t);t=null};
+  L.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-hist]');if(!h)return;fired=false;sx=e.clientX;sy=e.clientY;stop();
+    t=setTimeout(()=>{t=null;fired=true;const ex=draft.exercises[+h.dataset.hist];if(!ex)return;try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}openExHist(ex.name)},480)});
+  L.addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)stop()});
+  ['pointerup','pointercancel'].forEach(ev=>L.addEventListener(ev,stop));
+  L.addEventListener('click',e=>{if(fired&&e.target.closest('[data-hist]')){e.preventDefault();e.stopPropagation();fired=false}},true);
+  L.addEventListener('contextmenu',e=>{if(e.target.closest('[data-hist]'))e.preventDefault()})})();
+
 /* Training: Tag */
 function relLabel(ds){const t=todayIso();return ds===t?'Heute':ds===addDays(t,-1)?'Gestern':ds===addDays(t,1)?'Morgen':''}
 /* Rekorde: Satz mit dem höchsten Gewicht einer Einheit, wenn es das bisherige Maximum der Übung übertrifft */
@@ -1752,10 +1820,10 @@ function renderExList(){
   const A=draft.exercises;ssFix(A);const SL=ssLetters(A);
   $('exList').innerHTML=A.map((e,i)=>{const l=lastFor(e.name),inf=libInfo(e.name),pv=i>0&&A[i-1].ss,inSS=e.ss||pv;return`${i>0?`<button class="sslink${pv?' on':''}" data-ss="${i-1}" aria-pressed="${pv?'true':'false'}" aria-label="${pv?'Supersatz lösen':'Als Supersatz verbinden'}">${CHAIN}${pv?'Supersatz':'Supersatz verbinden'}</button>`:''}<div class="card${swapIdx===i?' swapping':''}${inSS?' ssin':''}${e.ss?' ssnext':''}${pv?' ssprev':''}" id="exc${i}">
     ${SL[i]?`<div class="ssbadge">${CHAIN}Supersatz ${SL[i]} · abwechselnd</div>`:''}
-    <div class="ex-head"><div class="exname">${exIcon(e.name)}<div style="min-width:0"><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div></div><div class="exacts"><button class="icon mv" data-mv="${i}_-1" aria-label="${esc(e.name)} nach oben"${i?'':' disabled'}>↑</button><button class="icon mv" data-mv="${i}_1" aria-label="${esc(e.name)} nach unten"${i<draft.exercises.length-1?'':' disabled'}>↓</button><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
+    <div class="ex-head"><div class="exname" data-hist="${i}" title="Lange drücken: Verlauf">${exIcon(e.name)}<div style="min-width:0"><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div></div><div class="exacts"><button class="icon mv" data-mv="${i}_-1" aria-label="${esc(e.name)} nach oben"${i?'':' disabled'}>↑</button><button class="icon mv" data-mv="${i}_1" aria-label="${esc(e.name)} nach unten"${i<draft.exercises.length-1?'':' disabled'}>↓</button><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
     ${confirmDel===i?`<div class="exconfirm">Übung wirklich entfernen?<button class="btn small yes" data-delex="${i}">Entfernen</button><button class="btn small" data-nodel="1">Abbrechen</button></div>`:''}
     ${inf&&inf.tip?`<div class="cx-tip">Tipp: ${esc(inf.tip)}</div>`:''}
-    ${l?`<div class="last">Zuletzt ${shortDay(l.date)}: ${setsSummary(l.sets)}</div>`:''}
+    ${l?`<div class="last" data-hist="${i}">Zuletzt ${shortDay(l.date)}: ${setsSummary(l.sets)}<svg class="hx-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></svg></div>`:''}
     <div class="sets"><div class="srow hdr"><span class="h">#</span><span class="h">kg</span><span class="h">Wdh.</span><span></span></div>
     ${e.sets.map((s,j)=>`<div class="srow${s._d?' done':''}${s.dr?' drop':''}" id="sr${i}_${j}"><span class="n" id="n${i}_${j}" data-done="${i}_${j}" role="button" tabindex="0" aria-pressed="${s._d?'true':'false'}" title="${s.dr?'Dropsatz abhaken':'Satz abhaken'}">${setNo(e.sets,j)}</span>
       <div class="step"><button data-step="${i}_${j}_w_-1" aria-label="Gewicht minus 1">−</button><input inputmode="decimal" id="w${i}_${j}" data-e="${i}" data-s="${j}" data-f="w" value="${s.w}" placeholder="0" aria-label="Gewicht Satz ${j+1}"><button data-step="${i}_${j}_w_1" aria-label="Gewicht plus 1">+</button></div>
