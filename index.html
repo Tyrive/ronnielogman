@@ -1623,10 +1623,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('daySheet').hidd
 function exHistory(name){
   return db.sessions.filter(s=>s.type==='kraft'&&s.id!==editingId&&(s.exercises||[]).some(e=>e.name===name)).sort((a,b)=>b.date.localeCompare(a.date)).map(s=>{
     const e=s.exercises.find(e=>e.name===name),sets=(e.sets||[]).filter(x=>num(x.r)>0);let best=null,b1=0;
-    sets.forEach(x=>{if(x.dr)return;const w=num(x.w),r=num(x.r),v=w>0?w*(1+r/30):r;if(v>b1){b1=v;best=x}});
+    sets.forEach(x=>{if(x.dr)return;const w=num(x.w),r=num(x.r),v=w>0?w*1000+r:r;if(v>b1){b1=v;best=x}});
     return{s,sets,best,b1,vol:sets.reduce((a,x)=>a+num(x.w)*num(x.r),0)}}).filter(h=>h.sets.length)}
 const bestTxt=x=>x?(num(x.w)>0?fmt(num(x.w))+' kg × '+num(x.r):num(x.r)+' Wdh.'):'–';
-function hxCmp(a,b){if(!b||!b.b1)return'first';const d=(a.b1-b.b1)/b.b1;return d>0.01?'up':d<-0.01?'down':'eq'}
+/* Vergleich: schwerster Satz zählt, bei gleichem Gewicht die Wiederholungen */
+function hxCmp(a,b){if(!b||!b.b1)return'first';return a.b1>b.b1?'up':a.b1<b.b1?'down':'eq'}
 const HX_L={up:'▲ stärker',down:'▼ schwächer',eq:'= gleich',first:'erstes Mal'};
 function daysAgoTxt(ds){const n=Math.round((parseD(todayIso())-parseD(ds))/864e5);return n<=0?'heute':n===1?'gestern':n<7?'vor '+n+' Tagen':n<14?'vor 1 Woche':n<60?'vor '+Math.round(n/7)+' Wochen':'vor '+Math.round(n/30)+' Monaten'}
 function openExHist(name){
@@ -1636,13 +1637,13 @@ function openExHist(name){
   else{
     const c=hxCmp(H[0],H[1]);const top=H.reduce((m,h)=>h.b1>m.b1?h:m,H[0]);
     const verdict=c==='first'?['eq','•','Erst eine Einheit gespeichert','Ab dem zweiten Mal siehst du hier, ob du stärker wirst.']:
-      [c,c==='up'?'▲':c==='down'?'▼':'=',c==='up'?'Letztes Mal stärker als davor':c==='down'?'Letztes Mal schwächer als davor':'Letztes Mal gleich stark wie davor',`Bester Satz ${bestTxt(H[0].best)}, davor ${bestTxt(H[1].best)}`];
+      [c,c==='up'?'▲':c==='down'?'▼':'=',c==='up'?'Letztes Mal stärker als davor':c==='down'?'Letztes Mal schwächer als davor':'Letztes Mal gleich stark wie davor',`Schwerster Satz ${bestTxt(H[0].best)}, davor ${bestTxt(H[1].best)}`];
     const P=H.slice(0,12).reverse();let spark='';
     if(P.length>1){const vs=P.map(h=>h.b1),mn=Math.min(...vs),mx=Math.max(...vs),rg=mx-mn||1;
       const pts=P.map((h,k)=>[(k/(P.length-1))*300,50-((h.b1-mn)/rg)*42]);const pl=pts.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');const lp=pts[pts.length-1];
-      spark=`<svg class="hx-spark" viewBox="-6 0 312 58" preserveAspectRatio="none" aria-hidden="true"><polygon class="ar2" points="0,58 ${pl} 300,58"/><polyline points="${pl}"/><circle cx="${lp[0]}" cy="${lp[1]}" r="3.6"/></svg><div class="hx-legend"><span>${shortDay(P[0].s.date)}</span><span>Bester Satz je Einheit</span><span>${shortDay(P[P.length-1].s.date)}</span></div>`}
+      spark=`<svg class="hx-spark" viewBox="-6 0 312 58" preserveAspectRatio="none" aria-hidden="true"><polygon class="ar2" points="0,58 ${pl} 300,58"/><polyline points="${pl}"/><circle cx="${lp[0]}" cy="${lp[1]}" r="3.6"/></svg><div class="hx-legend"><span>${shortDay(P[0].s.date)}</span><span>Schwerster Satz je Einheit</span><span>${shortDay(P[P.length-1].s.date)}</span></div>`}
     $('exsB').innerHTML=`<div class="hx-top"><div class="hx-verdict ${verdict[0]}"><span class="ar">${verdict[1]}</span><div>${verdict[2]}<small>${verdict[3]}</small></div></div>${spark}<div class="hx-legend"><span>Bestwert: ${bestTxt(top.best)} (${shortDay(top.s.date)})</span></div></div>`+
-      H.slice(0,30).map((h,k)=>{const t=hxCmp(h,H[k+1]),pl=planOf(h.s);return`<div class="hx-row"><div class="hx-d">${shortDay(h.s.date)}<small>${daysAgoTxt(h.s.date)}${pl?' · '+esc(pl.name):h.s.title?' · '+esc(h.s.title):''}</small></div><span class="hx-t ${t}">${HX_L[t]}</span><div class="hx-sets">${setsSummary(h.sets,prIndex(name,h.sets,h.s.date,h.s.id))}</div><div class="hx-b">Bester Satz ${bestTxt(h.best)}${h.vol?' · '+fmt(h.vol,0)+' kg Volumen':''}</div></div>`}).join('')}
+      H.slice(0,30).map((h,k)=>{const t=hxCmp(h,H[k+1]),pl=planOf(h.s);return`<div class="hx-row"><div class="hx-d">${shortDay(h.s.date)}<small>${daysAgoTxt(h.s.date)}${pl?' · '+esc(pl.name):h.s.title?' · '+esc(h.s.title):''}</small></div><span class="hx-t ${t}">${HX_L[t]}</span><div class="hx-sets">${setsSummary(h.sets,prIndex(name,h.sets,h.s.date,h.s.id))}</div><div class="hx-b">Schwerster Satz ${bestTxt(h.best)}${h.vol?' · '+fmt(h.vol,0)+' kg Volumen':''}</div></div>`}).join('')}
   $('exSheet').hidden=false;$('exsB').scrollTop=0}
 function closeExHist(){$('exSheet').hidden=true}
 $('exsX').addEventListener('click',closeExHist);
