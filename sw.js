@@ -1,6 +1,6 @@
 // Overload Service Worker
 // Bei jedem Update der App diese Versionsnummer erhöhen (z. B. v2, v3 ...).
-const CACHE = 'ronnielogman-v50';
+const CACHE = 'ronnielogman-v51';
 const APP_SHELL = [
   './',
   './index.html',
@@ -32,7 +32,7 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(APP_SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', event => {
@@ -57,6 +57,17 @@ self.addEventListener('fetch', event => {
       fetch(req, { cache: 'no-cache' })
         .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return res; })
         .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Manifest und App-Icons: erst Netz, damit neuer Name und neues Icon beim Installieren ankommen
+  const path = new URL(req.url).pathname;
+  if (path.endsWith('/manifest.webmanifest') || /\/icons\/[^/]+\.png$/.test(path)) {
+    event.respondWith(
+      fetch(req, { cache: 'no-cache' })
+        .then(res => { if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
+        .catch(() => caches.match(req))
     );
     return;
   }
