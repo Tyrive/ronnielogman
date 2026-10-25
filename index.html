@@ -462,6 +462,16 @@ body{min-height:100vh;min-height:100dvh;background-repeat:no-repeat!important}
 .step button:active{background:var(--line)}
 .step input{border:0;border-radius:0;background:none;padding:9px 0;text-align:center;font-family:var(--mono);flex:1;min-width:0;width:100%}
 .exnote{font-size:15px}
+.noterow{display:flex;gap:8px;align-items:center}
+.noterow .exnote{flex:1;min-width:0}
+.pinadd{display:inline-flex;align-items:center;gap:5px;flex:none;white-space:nowrap}
+.pin-ic{width:15px;height:15px;flex:none}
+.pin{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--accent) 9%,transparent);border-radius:10px;padding:2px 10px;margin-top:2px;color:var(--accent)}
+.pin input{flex:1;min-width:0;width:auto!important;height:auto!important;box-shadow:none!important;border:0!important;background:none!important;margin:0!important;color:var(--ink);font:500 14px var(--body);padding:7px 0;outline:none}
+.pin input::placeholder{color:var(--muted)}
+.hx-pin{display:flex;align-items:center;gap:8px;color:var(--accent);font-size:14px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--accent) 9%,transparent);border-radius:12px;padding:9px 12px}
+.hx-pin span{color:var(--ink)}
+.hx-n{grid-column:1/-1;font:italic 13px var(--body);color:var(--ink);opacity:.85;padding-left:9px;border-left:2px solid var(--accent);margin-top:3px}
 .exs{display:flex;flex-direction:column;margin-top:8px}
 .exrow{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--line)}
 .exrow:last-child{padding-bottom:2px}
@@ -1453,7 +1463,8 @@ function cleanDb(p){
   const custom=arr(p.custom).filter(x=>x&&typeof x==='object'&&x.n).map(x=>{const o={n:STR(x.n,80),m:STR(x.m,60),e:STR(x.e,300)};if(x.m2)o.m2=STR(x.m2,60);if(x.tip)o.tip=STR(x.tip,200);if(x.of)o.of=STR(x.of,80);return o});
   const hidden=arr(p.hidden).map(n=>STR(n,80)).filter(Boolean);
   const g=p.goals&&typeof p.goals==='object'?p.goals:{};
-  return{sessions,goals:{kraft:Math.min(14,NUM(g.kraft)||4),lauf:Math.min(14,NUM(g.lauf)||3),...(g.off?{off:true}:{})},custom,hidden,plans:Array.isArray(p.plans)?plans:undefined};
+  const pins={};if(p.pins&&typeof p.pins==='object'&&!Array.isArray(p.pins))Object.keys(p.pins).slice(0,400).forEach(k=>{const n=STR(k,80);if(n)pins[n]=STR(p.pins[k],300)});
+  return{sessions,goals:{kraft:Math.min(14,NUM(g.kraft)||4),lauf:Math.min(14,NUM(g.lauf)||3),...(g.off?{off:true}:{})},custom,hidden,pins,plans:Array.isArray(p.plans)?plans:undefined};
 }
 const mmss=s=>Math.floor(s/60)+':'+pad(Math.round(s%60));
 const WD=['Mo','Di','Mi','Do','Fr','Sa','So'];
@@ -1475,7 +1486,7 @@ function seed(){
   return out;
 }
 function load(){try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&Array.isArray(p.sessions))return cleanDb(p)}}catch(e){}return{sessions:[],goals:{kraft:4,lauf:3}}}
-let db=load();if(!Array.isArray(db.custom))db.custom=[];if(!Array.isArray(db.hidden))db.hidden=[];
+let db=load();if(!Array.isArray(db.custom))db.custom=[];if(!db.pins||typeof db.pins!=='object')db.pins={};if(!Array.isArray(db.hidden))db.hidden=[];
 if(!Array.isArray(db.plans))db.plans=DEFAULT_PLANS.map(([n,c])=>({id:uid(),name:n,color:c,exercises:TEMPLATES[n].slice()}));
 db.sessions.forEach(s=>{if(s.type==='kraft'&&!s.planId){const p=db.plans.find(p=>p.name===s.title);if(p)s.planId=p.id}});
 db.sessions.forEach(s=>{if(s.type==='lauf'&&!s.kind){s.kind=runKind(s);s.title=RUN_KINDS.find(r=>r[0]===s.kind)[1]}});
@@ -1624,7 +1635,7 @@ function exHistory(name){
   return db.sessions.filter(s=>s.type==='kraft'&&s.id!==editingId&&(s.exercises||[]).some(e=>e.name===name)).sort((a,b)=>b.date.localeCompare(a.date)).map(s=>{
     const e=s.exercises.find(e=>e.name===name),sets=(e.sets||[]).filter(x=>num(x.r)>0);let best=null,b1=0;
     sets.forEach(x=>{if(x.dr)return;const w=num(x.w),r=num(x.r),v=w>0?w*1000+r:r;if(v>b1){b1=v;best=x}});
-    return{s,sets,best,b1,vol:sets.reduce((a,x)=>a+num(x.w)*num(x.r),0)}}).filter(h=>h.sets.length)}
+    return{s,sets,best,b1,note:e.note||'',vol:sets.reduce((a,x)=>a+num(x.w)*num(x.r),0)}}).filter(h=>h.sets.length)}
 const bestTxt=x=>x?(num(x.w)>0?fmt(num(x.w))+' kg × '+num(x.r):num(x.r)+' Wdh.'):'–';
 /* Vergleich: schwerster Satz zählt, bei gleichem Gewicht die Wiederholungen */
 function hxCmp(a,b){if(!b||!b.b1)return'first';return a.b1>b.b1?'up':a.b1<b.b1?'down':'eq'}
@@ -1643,7 +1654,8 @@ function openExHist(name){
       const pts=P.map((h,k)=>[(k/(P.length-1))*300,50-((h.b1-mn)/rg)*42]);const pl=pts.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');const lp=pts[pts.length-1];
       spark=`<svg class="hx-spark" viewBox="-6 0 312 58" preserveAspectRatio="none" aria-hidden="true"><polygon class="ar2" points="0,58 ${pl} 300,58"/><polyline points="${pl}"/><circle cx="${lp[0]}" cy="${lp[1]}" r="3.6"/></svg><div class="hx-legend"><span>${shortDay(P[0].s.date)}</span><span>Schwerster Satz je Einheit</span><span>${shortDay(P[P.length-1].s.date)}</span></div>`}
     $('exsB').innerHTML=`<div class="hx-top"><div class="hx-verdict ${verdict[0]}"><span class="ar">${verdict[1]}</span><div>${verdict[2]}<small>${verdict[3]}</small></div></div>${spark}<div class="hx-legend"><span>Bestwert: ${bestTxt(top.best)} (${shortDay(top.s.date)})</span></div></div>`+
-      H.slice(0,30).map((h,k)=>{const t=hxCmp(h,H[k+1]),pl=planOf(h.s);return`<div class="hx-row"><div class="hx-d">${shortDay(h.s.date)}<small>${daysAgoTxt(h.s.date)}${pl?' · '+esc(pl.name):h.s.title?' · '+esc(h.s.title):''}</small></div><span class="hx-t ${t}">${HX_L[t]}</span><div class="hx-sets">${setsSummary(h.sets,prIndex(name,h.sets,h.s.date,h.s.id))}</div><div class="hx-b">Schwerster Satz ${bestTxt(h.best)}${h.vol?' · '+fmt(h.vol,0)+' kg Volumen':''}</div></div>`}).join('')}
+      H.slice(0,30).map((h,k)=>{const t=hxCmp(h,H[k+1]),pl=planOf(h.s);return`<div class="hx-row"><div class="hx-d">${shortDay(h.s.date)}<small>${daysAgoTxt(h.s.date)}${pl?' · '+esc(pl.name):h.s.title?' · '+esc(h.s.title):''}</small></div><span class="hx-t ${t}">${HX_L[t]}</span><div class="hx-sets">${setsSummary(h.sets,prIndex(name,h.sets,h.s.date,h.s.id))}</div><div class="hx-b">Schwerster Satz ${bestTxt(h.best)}${h.vol?' · '+fmt(h.vol,0)+' kg Volumen':''}</div>${h.note?`<div class="hx-n">${esc(h.note)}</div>`:''}</div>`}).join('')}
+  if(db.pins[name])$('exsB').insertAdjacentHTML('afterbegin',`<div class="hx-pin"><svg class="pin-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6 4 4H6l4-4z"/><path d="M12 13v8"/></svg><span>${esc(db.pins[name])}</span></div>`);
   $('exSheet').hidden=false;$('exsB').scrollTop=0}
 function closeExHist(){$('exSheet').hidden=true}
 $('exsX').addEventListener('click',closeExHist);
@@ -1706,7 +1718,7 @@ function applyPlanSS(planId){const last=db.sessions.filter(s=>s.type==='kraft'&&
   draft.exercises.forEach((e,i)=>{const n=draft.exercises[i+1];if(n&&pairs.has(e.name+'|'+n.name))e.ss=1})}
 function renderTpls(){$('tpls').innerHTML=db.plans.map(p=>`<button class="chip${draft.planId===p.id?' on':''}" data-tpl="${p.id}">${mkRaw('fill',p.color)}${esc(p.name)}</button>`).join('')+`<button class="chip freechip${!draft.planId&&isFree(draft.title)?' on':''}" data-tpl="">＋ Freies Training</button>`}
 
-let libM='Alle',libE='Alle';
+let libM='Alle',libE='Alle';const pinOpen=new Set();let pinTimer=null;
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 function libItems(){const cn=new Set(db.custom.map(c=>c.n));return LIB.filter(x=>!isHidden(x.n)&&!cn.has(x.n)).concat(db.custom.map(c=>c.of?{...c,edited:1}:{...c,own:1}),allNames().filter(n=>!libInfo(n)).map(n=>({n,m:'Eigene',e:'',bare:1})))}
 function renderLib(){
@@ -1824,6 +1836,7 @@ function renderExList(){
     <div class="ex-head"><div class="exname" data-hist="${i}" title="Lange drücken: Verlauf">${exIcon(e.name)}<div style="min-width:0"><strong>${esc(e.name)}</strong>${inf?`<div class="tag">${esc(inf.m)}${inf.m2?' + '+esc(inf.m2):''} · ${esc(inf.e)}</div>`:''}</div></div><div class="exacts"><button class="icon mv" data-mv="${i}_-1" aria-label="${esc(e.name)} nach oben"${i?'':' disabled'}>↑</button><button class="icon mv" data-mv="${i}_1" aria-label="${esc(e.name)} nach unten"${i<draft.exercises.length-1?'':' disabled'}>↓</button><button class="icon swap" data-swapex="${i}" aria-label="${esc(e.name)} austauschen" title="Übung austauschen"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5A8 8 0 0 0 5.2 7.2"/><path d="M4.5 14.5a8 8 0 0 0 14.3 2.3"/><path d="M5 3.5v4h4"/><path d="M19 20.5v-4h-4"/></svg></button><button class="icon" data-askdel="${i}" aria-label="${esc(e.name)} entfernen" title="Übung entfernen">✕</button></div></div>
     ${confirmDel===i?`<div class="exconfirm">Übung wirklich entfernen?<button class="btn small yes" data-delex="${i}">Entfernen</button><button class="btn small" data-nodel="1">Abbrechen</button></div>`:''}
     ${inf&&inf.tip?`<div class="cx-tip">Tipp: ${esc(inf.tip)}</div>`:''}
+    ${(db.pins[e.name]||pinOpen.has(e.name))?`<label class="pin" title="Feste Notiz: bleibt bei jedem Training stehen"><svg class="pin-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6 4 4H6l4-4z"/><path d="M12 13v8"/></svg><input data-pin="${i}" value="${esc(db.pins[e.name]||'')}" placeholder="Feste Notiz, z. B. Sitz Stufe 4, enger Griff" aria-label="Feste Notiz zu ${esc(e.name)}" maxlength="300"></label>`:''}
     ${l?`<div class="last" data-hist="${i}">Zuletzt ${shortDay(l.date)}: ${setsSummary(l.sets)}<svg class="hx-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></svg></div>`:''}
     <div class="sets"><div class="srow hdr"><span class="h">#</span><span class="h">kg</span><span class="h">Wdh.</span><span></span></div>
     ${e.sets.map((s,j)=>`<div class="srow${s._d?' done':''}${s.dr?' drop':''}" id="sr${i}_${j}"><span class="n" id="n${i}_${j}" data-done="${i}_${j}" role="button" tabindex="0" aria-pressed="${s._d?'true':'false'}" title="${s.dr?'Dropsatz abhaken':'Satz abhaken'}">${setNo(e.sets,j)}</span>
@@ -1831,7 +1844,7 @@ function renderExList(){
       <div class="step"><button data-step="${i}_${j}_r_-1" aria-label="Wiederholungen minus 1">−</button><input inputmode="numeric" id="r${i}_${j}" data-e="${i}" data-s="${j}" data-f="r" value="${s.r}" placeholder="0" aria-label="Wiederholungen Satz ${j+1}"><button data-step="${i}_${j}_r_1" aria-label="Wiederholungen plus 1">+</button></div>
       <button class="icon" data-delset="${i}_${j}" aria-label="Satz entfernen">✕</button></div>`).join('')}
     </div><div class="addrow"><button class="btn small" data-addset="${i}">+ Satz</button><button class="btn small" data-adddrop="${i}" title="Dropsatz: direkt weiter mit weniger Gewicht">↘ Dropsatz</button></div>
-    <input class="exnote" id="note${i}" data-note="${i}" value="${esc(e.note||'')}" placeholder="Notiz zur Übung, z. B. Griff, Gefühl, Technik" aria-label="Notiz zu ${esc(e.name)}"></div>`}).join('');
+    <div class="noterow"><input class="exnote" id="note${i}" data-note="${i}" value="${esc(e.note||'')}" placeholder="Notiz nur für heute" aria-label="Notiz für heute zu ${esc(e.name)}">${(db.pins[e.name]||pinOpen.has(e.name))?'':`<button class="btn small pinadd" data-pinadd="${i}" title="Feste Notiz anlegen, die bei jedem Training angezeigt wird"><svg class="pin-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6 4 4H6l4-4z"/><path d="M12 13v8"/></svg>Feste Notiz</button>`}</div></div>`}).join('');
   draft.exercises.forEach((_,i)=>updPR(i));
   renderWTop();
 }
@@ -1857,8 +1870,9 @@ $('tpls').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if
   if(p){draft.planId=p.id;draft.title=p.name;if(!editingId){draft.exercises=p.exercises.map(newEx);applyPlanSS(p.id)}}else{draft.planId=null;draft.title=FREE_NAME;if(!editingId&&draft.exercises.length&&!draft.exercises.some(e=>e.sets.some(x=>x._d)))draft.exercises=[]}renderTpls();renderExList();
   if(!p&&!editingId&&!draft.exercises.length){setPicker(true);$('picker').scrollIntoView({block:'start',behavior:SMOOTH()})}});
 $('exList').addEventListener('keydown',e=>{const dn=e.target.closest('[data-done]');if(dn&&(e.key==='Enter'||e.key===' ')){e.preventDefault();dn.click()}});
-$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f){draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;updPR(+t.dataset.e);wkBegin();saveDraftSoon();if(t.dataset.f==='r')repsChanged(+t.dataset.e,+t.dataset.s);renderWTop()}else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value});
-$('exList').addEventListener('click',e=>{const dn=e.target.closest('[data-done]');if(dn){const[i,j]=dn.dataset.done.split('_').map(Number),x=draft.exercises[i].sets[j];const on=!x._d;markDone(i,j,on);if(on){lastSet={i,j};wkBegin()}else{clearTimeout(adT);if(running()&&lastSet&&lastSet.i===i&&lastSet.j===j)stopRest()}return}
+$('exList').addEventListener('input',e=>{const t=e.target;if(t.dataset.f){draft.exercises[t.dataset.e].sets[t.dataset.s][t.dataset.f]=t.value;updPR(+t.dataset.e);wkBegin();saveDraftSoon();if(t.dataset.f==='r')repsChanged(+t.dataset.e,+t.dataset.s);renderWTop()}else if(t.dataset.note!==undefined)draft.exercises[+t.dataset.note].note=t.value;else if(t.dataset.pin!==undefined){const ex=draft.exercises[+t.dataset.pin];if(ex){db.pins[ex.name]=t.value.slice(0,300);clearTimeout(pinTimer);pinTimer=setTimeout(persist,700)}}});
+$('exList').addEventListener('focusout',e=>{const t=e.target;if(t.dataset&&t.dataset.pin!==undefined){const ex=draft.exercises[+t.dataset.pin];if(!ex)return;const v=t.value.trim();db.pins[ex.name]=v;clearTimeout(pinTimer);persist();if(!v){pinOpen.delete(ex.name);setTimeout(renderExList,0)}}});
+$('exList').addEventListener('click',e=>{const pa=e.target.closest('[data-pinadd]');if(pa){const ex=draft.exercises[+pa.dataset.pinadd];pinOpen.add(ex.name);renderExList();const inp=document.querySelector(`[data-pin="${pa.dataset.pinadd}"]`);if(inp)inp.focus();return}const dn=e.target.closest('[data-done]');if(dn){const[i,j]=dn.dataset.done.split('_').map(Number),x=draft.exercises[i].sets[j];const on=!x._d;markDone(i,j,on);if(on){lastSet={i,j};wkBegin()}else{clearTimeout(adT);if(running()&&lastSet&&lastSet.i===i&&lastSet.j===j)stopRest()}return}
   const t=e.target.closest('button');if(!t)return;if(!$('saveAsk').hidden&&!t.dataset.step)hideAsk();
   if(t.dataset.step){const[i,j,f,d]=t.dataset.step.split('_'),set=draft.exercises[+i].sets[+j],v=Math.max(0,Math.round((num(set[f])+(+d))*100)/100);
     set[f]=v;const inp=$((f==='w'?'w':'r')+i+'_'+j);if(inp)inp.value=String(v).replace('.',',');updPR(+i);wkBegin();saveDraftSoon();if(f==='r')repsChanged(+i,+j);renderWTop();return}
@@ -2169,7 +2183,7 @@ $('themeSeg').addEventListener('click',e=>{const b=e.target.closest('[data-theme
 $('exp').addEventListener('click',()=>{$('ioText').value=JSON.stringify(db)});
 $('copy').addEventListener('click',()=>{if(!$('ioText').value)$('ioText').value=JSON.stringify(db);const t=$('ioText').value;
   try{navigator.clipboard.writeText(t).then(()=>toast('Kopiert'),()=>{$('ioText').select();toast('Text markiert, bitte manuell kopieren')})}catch(e){$('ioText').select()}});
-$('imp').addEventListener('click',()=>{try{const p=JSON.parse($('ioText').value);if(!Array.isArray(p.sessions))throw 0;const c=cleanDb(p);db={...c,plans:c.plans||db.plans};persist();renderAll();toast('Wiederhergestellt')}catch(e){toast('Das Backup ist ungültig')}});
+$('imp').addEventListener('click',()=>{try{const p=JSON.parse($('ioText').value);if(!Array.isArray(p.sessions))throw 0;const c=cleanDb(p);db={...c,pins:{...db.pins,...c.pins},plans:c.plans||db.plans};persist();renderAll();toast('Wiederhergestellt')}catch(e){toast('Das Backup ist ungültig')}});
 $('wipe').addEventListener('click',e=>{const b=e.currentTarget;if(b.dataset.armed){db.sessions=[];persist();renderAll();toast('Alles gelöscht');delete b.dataset.armed;b.textContent='Alle Trainings löschen'}else{b.dataset.armed='1';b.textContent='Wirklich alles löschen? Nochmal tippen';setTimeout(()=>{delete b.dataset.armed;b.textContent='Alle Trainings löschen'},4000)}});
 $('clearEx').addEventListener('click',()=>{db.sessions=db.sessions.filter(s=>!s.example);persist();renderAll();toast('Beispiele gelöscht')});
 
@@ -2877,7 +2891,7 @@ renderAll();if(draftRestored)updPace();
   function normalize(p){const c=cleanDb(p&&typeof p==='object'?p:{});return{...c,plans:c.plans||db.plans}}
   function byKey(a,b,k){const m=new Map();a.forEach(x=>m.set(x[k],x));b.forEach(x=>m.set(x[k],x));return[...m.values()]}
   // Zusammenführen: Einträge aus beiden Quellen, bei gleicher ID gewinnt "lokal"
-  function merge(remote,local){return{sessions:byKey(remote.sessions,local.sessions,'id'),goals:local.goals||remote.goals,custom:byKey(remote.custom,local.custom,'n'),hidden:[...new Set([...(remote.hidden||[]),...(local.hidden||[])])],plans:byKey(remote.plans,local.plans,'id')}}
+  function merge(remote,local){return{sessions:byKey(remote.sessions,local.sessions,'id'),goals:local.goals||remote.goals,custom:byKey(remote.custom,local.custom,'n'),hidden:[...new Set([...(remote.hidden||[]),...(local.hidden||[])])],pins:{...(remote.pins||{}),...(local.pins||{})},plans:byKey(remote.plans,local.plans,'id')}}
   const hasOwnData=d=>d.sessions.some(s=>!s.example)||d.custom.length>0;
 
   async function push(){
